@@ -21,6 +21,7 @@ void AWalk_FloorGenerator::BeginPlay()
 
 	GenerateMap();
 	SpawnGeometry();
+	CreateDoors(DefaultDoorCount);
 	
 }
 
@@ -54,6 +55,18 @@ void AWalk_FloorGenerator::InitializeMap()
 	{
 		//Wall
 		Map[i] = true;
+	}
+
+	//RNG Setup
+	FRandomStream Rng;
+	if (Seed >= 0)
+	{
+		Rng.Initialize(Seed);
+	}
+	else
+	{
+		//Non-deterministic
+		Rng.GenerateNewSeed();
 	}
 }
 
@@ -173,6 +186,42 @@ void AWalk_FloorGenerator::SpawnGeometry()
 				const float ZScale = WallHeight / BasePlaneSize;
 				WallActor->SetActorScale3D(FVector(XYScale, XYScale, ZScale));
 				WallActor->SetMobility(EComponentMobility::Static);
+				
+				//Check how many neighbors the floor cell has, to determine if it's an outer wall cell or not
+				int32 FloorNeighbors = 0;
+				FIntPoint InteriorFloorCell(-1, -1);
+
+				if (x + 1 < MapWidth  && !Map[Index(x + 1, y)])
+				{
+					++FloorNeighbors;
+					InteriorFloorCell = FIntPoint(x + 1, y);
+				}
+				if (x - 1 >= 0        && !Map[Index(x - 1, y)])
+				{
+					++FloorNeighbors;
+					InteriorFloorCell = FIntPoint(x - 1, y);
+				}
+				if (y + 1 < MapHeight && !Map[Index(x, y + 1)])
+				{
+					++FloorNeighbors;
+					InteriorFloorCell = FIntPoint(x, y + 1);
+				}
+				if (y - 1 >= 0        && !Map[Index(x, y - 1)])
+				{
+					++FloorNeighbors;
+					InteriorFloorCell = FIntPoint(x, y - 1);
+				}
+
+				//Outer walls only have 1 neighbor
+				if (FloorNeighbors == 1)
+				{
+					FDungeonWallSegment Seg;
+					Seg.Cell = FIntPoint(x, y);
+					Seg.Direction = 0;
+					Seg.WallActor = WallActor;
+					WallSegments.Add(Seg);
+				}
+				
 			}
 		}
 	}
@@ -203,4 +252,73 @@ bool AWalk_FloorGenerator::HasFloorNeighbor(int32 X, int32 Y) const
 	}
 
 	return false;
+}
+
+void AWalk_FloorGenerator::CreateDoors(int32 DoorCount)
+{
+	if (DoorCount <= 0) return;
+
+	if (WallSegments.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Walk_FloorGenerator: No wall segments to carve doors from!"));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	//Clamp to existing walls
+	DoorCount = FMath::Min(DoorCount, WallSegments.Num());
+
+	//Reuse Seed so doors are deterministic relative to layout, but offset so it doesn't affect shape generation
+	FRandomStream Rng;
+	if (Seed >= 0)
+	{
+		Rng.Initialize(Seed + 1337);
+	}
+	else
+	{
+		Rng.GenerateNewSeed();
+	}
+
+	for (int32 d = 0; d < DoorCount && WallSegments.Num() > 0; ++d)
+	{
+		const int32 Index = Rng.RandRange(0, WallSegments.Num() - 1);
+		FDungeonWallSegment Seg = WallSegments[Index];
+
+		AStaticMeshActor* WallActor = Seg.WallActor.Get();
+		if (!WallActor)
+		{
+			//Dead pointer, discard and retry
+			WallSegments.RemoveAtSwap(Index);
+			--d;
+			continue;
+		}
+
+		const FTransform WallTransform = WallActor->GetActorTransform();
+
+		//Remove the wall section
+		WallActor->Destroy();
+		WallSegments.RemoveAtSwap(Index);
+
+		//Spawn a door mesh
+		if (DoorMesh)
+		{
+			AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+
+			if (DoorActor)
+			{
+				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
+				{
+					DoorComp->SetStaticMesh(DoorMesh);
+					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
+					DoorActor->SetMobility(EComponentMobility::Static);
+				}
+				else
+				{
+					DoorActor->Destroy();
+				}
+			}
+		}
+	}
 }

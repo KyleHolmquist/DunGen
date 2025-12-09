@@ -4,27 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "DungeonWallSegment.h"
 #include "Holmquist_FloorGenerator.generated.h"
-
-class AStaticMeshActor;
-
-USTRUCT()
-struct FHolmquistWallSegment
-{
-	GENERATED_BODY()
-
-	//Grid cell that owns this wall
-	UPROPERTY()
-	FIntPoint Cell;
-
-	//0 = East, 1 = West, 2 = North, 3 = South
-	UPROPERTY()
-	uint8 Direction = 0;
-
-	//The spawned wall actor
-	UPROPERTY()
-	TWeakObjectPtr<AStaticMeshActor> WallActor;
-};
 
 UCLASS()
 class PROCEDURALDUNGEON4_API AHolmquist_FloorGenerator : public AActor
@@ -80,14 +61,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Walls")
 	float WallThickness = 40.f;
 
-	//Whether to spawn pillars in interior gaps or not
-	UPROPERTY(EditAnywhere, Category = "Walls")
-	bool bSpawnPillarsInGaps = true;
-
-	//Footprint size for pillars
-	UPROPERTY(EditAnywhere, Category = "Walls")
-	float PillarSize = 40.f;
-
 	//Mesh for the Walls
 	UPROPERTY(EditAnywhere, Category = "Walls")
 	UStaticMesh* WallMesh;
@@ -112,7 +85,7 @@ protected:
 
 	//All spawned Wall segments
 	UPROPERTY()
-	TArray<FHolmquistWallSegment> WallSegments;
+	TArray<FDungeonWallSegment> WallSegments;
 
 	FORCEINLINE int32 Index(int32 X, int32 Y) const
 	{

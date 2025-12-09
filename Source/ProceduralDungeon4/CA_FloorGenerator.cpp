@@ -23,6 +23,7 @@ void ACA_FloorGenerator::BeginPlay()
 	RunSimulation();
 	EnsureConnectivity();
 	SpawnGeometry();
+	CreateDoors(DefaultDoorCount);
 	
 }
 
@@ -152,6 +153,9 @@ void ACA_FloorGenerator::SpawnGeometry()
 
 	const float BasePlaneSize = 100.f;
 
+	//Track all wall actors by grid
+	WallActorMap.Init(nullptr, MapWidth * MapHeight);
+
 	for (int32 y = 0; y < MapHeight; ++y)
 	{
 		for (int32 x = 0; x < MapWidth; ++x)
@@ -204,6 +208,44 @@ void ACA_FloorGenerator::SpawnGeometry()
 
 				WallActor->SetActorScale3D(FVector(XYScale, XYScale, ZScale));
 				WallActor->SetMobility(EComponentMobility::Static);
+
+				//Remember this wall actor at (x, y)
+				WallActorMap[Index(x, y)] = WallActor;
+
+				// Count neighboring floor cells, which is when CurrentMap == false
+				int32 FloorNeighbors = 0;
+				FIntPoint InteriorFloorCell(-1, -1);
+
+				// Check 4-connected neighbours
+				const int32 DX[4] = { 1, -1, 0,  0 };
+				const int32 DY[4] = { 0,  0, 1, -1 };
+
+				for (int32 i = 0; i < 4; ++i)
+				{
+					const int32 NX = x + DX[i];
+					const int32 NY = y + DY[i];
+
+					if (NX < 0 || NX >= MapWidth || NY < 0 || NY >= MapHeight)
+						continue;
+
+					// floor == !CurrentMap
+					if (!CurrentMap[Index(NX, NY)])
+					{
+						++FloorNeighbors;
+						InteriorFloorCell = FIntPoint(NX, NY);
+					}
+				}
+
+				//Outer walls only have one floor neighbour.
+				if (FloorNeighbors == 1)
+				{
+					FDungeonWallSegment Seg;
+					Seg.Cell = InteriorFloorCell;
+					Seg.WallCell = FIntPoint(x, y);
+					Seg.Direction = 0;
+					Seg.WallActor = WallActor;
+					WallSegments.Add(Seg);
+				}
 			}
 		}
 	}
@@ -362,4 +404,153 @@ void ACA_FloorGenerator::CarveCorridorBetween(const FIntPoint& A, const FIntPoin
 	//Make sure the destination cell is also Floor
 	const int32 EndIdx = Index(B.X, B.Y);
 	CurrentMap[EndIdx] = false;
+}
+
+void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
+{
+	if (DoorCount <= 0) return;
+
+	if (WallSegments.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CA_FloorGenerator: No wall segments to carve doors from!"));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	//Clamp to existing walls
+	DoorCount = FMath::Min(DoorCount, WallSegments.Num());
+
+	//Reuse Seed so doors are deterministic relative to layout, but offset so it doesn't affect shape generation
+	FRandomStream Rng;
+	if (Seed >= 0)
+	{
+		Rng.Initialize(Seed + 1337);
+	}
+	else
+	{
+		Rng.GenerateNewSeed();
+	}
+
+	for (int32 d = 0; d < DoorCount && WallSegments.Num() > 0; ++d)
+	{
+		const int32 SegIndex = Rng.RandRange(0, WallSegments.Num() - 1);
+		FDungeonWallSegment Seg = WallSegments[SegIndex];
+
+		AStaticMeshActor* WallActor = Seg.WallActor.Get();
+		if (!WallActor)
+		{
+			//Dead pointer, discard and retry
+			WallSegments.RemoveAtSwap(SegIndex);
+			--d;
+			continue;
+		}
+
+		const FTransform WallTransform = WallActor->GetActorTransform();
+
+		//Grid coordinates
+		//On Inside
+		const FIntPoint FloorCell = Seg.Cell;
+		//On Boundary
+		const FIntPoint WallCell = Seg.WallCell;
+
+		//Clear this wall from an actor map and destroy it
+		const int32 WallIdx = Index(WallCell.X, WallCell.Y);
+		if (WallActorMap.IsValidIndex(WallIdx))
+		{
+			WallActorMap[WallIdx] = nullptr;
+		}
+
+		//Remove the wall section
+		WallActor->Destroy();
+		WallSegments.RemoveAtSwap(SegIndex);
+
+		// -- Carve a straight corridor from the wall cell to the nearest edge --
+
+		//Direction from interior floor cell to wall cell
+		int32 DirX = Seg.WallCell.X - FloorCell.X;
+		int32 DirY = Seg.WallCell.Y - FloorCell.Y;
+		DirX = FMath::Clamp(DirX, -1, 1);
+		DirY = FMath::Clamp(DirY, -1, 1);
+
+		//Only carve a corridor if it's a valid cardinal direction
+		const bool bHasDirection = !(DirX == 0 && DirY == 0);
+
+		if (bHasDirection)
+		{
+			int32 CX = Seg.WallCell.X;
+			int32 CY = Seg.WallCell.Y;
+
+			//Spawn a floor mesh for the corridor
+			while (CX >= 0 && CX < MapWidth && CY >= 0 && CY < MapHeight)
+			{
+				const int32 CellIdx = Index(CX, CY);
+
+				//Carve this cell to floor in the logical map
+				CurrentMap[CellIdx] = false;
+
+				//Remove existing wall actor at this cell if any
+				if (WallActorMap.IsValidIndex(CellIdx) && WallActorMap[CellIdx].IsValid())
+				{
+					WallActorMap[CellIdx]->Destroy();
+					WallActorMap[CellIdx] = nullptr;
+				}
+
+				//Spawn a floor mesh along the corridor if there is one
+				if (FloorMesh)
+				{
+					const float BasePlaneSize = 100.f;
+					const float ScaleFactor = TileSize / BasePlaneSize;
+
+					const FVector FloorPos = GetActorLocation() + FVector(CX * TileSize, CY * TileSize, FloorZ);
+
+					AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(FloorPos, FRotator::ZeroRotator);
+
+					if (FloorActor)
+					{
+						if (UStaticMeshComponent* FloorComp = FloorActor->GetStaticMeshComponent())
+						{
+							FloorComp->SetStaticMesh(FloorMesh);
+							FloorActor->SetActorScale3D(FVector(ScaleFactor, ScaleFactor, 1.f));
+							FloorActor->SetMobility(EComponentMobility::Static);
+						}
+						else
+						{
+							FloorActor->Destroy();
+						}
+					}
+				}
+
+				// Stop carving if border is reached
+				if (CX == 0 || CX == MapWidth - 1 || CY == 0 || CY == MapHeight - 1)
+				{
+					break;
+				}
+
+				CX += DirX;
+				CY += DirY;
+			}
+		}
+
+		//Spawn a door mesh
+		if (DoorMesh)
+		{
+			AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+
+			if (DoorActor)
+			{
+				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
+				{
+					DoorComp->SetStaticMesh(DoorMesh);
+					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
+					DoorActor->SetMobility(EComponentMobility::Static);
+				}
+				else
+				{
+					DoorActor->Destroy();
+				}
+			}
+		}
+	}
 }

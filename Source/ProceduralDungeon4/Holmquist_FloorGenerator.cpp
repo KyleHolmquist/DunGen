@@ -206,7 +206,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 							WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
 							WallActor->SetMobility(EComponentMobility::Static);
 
-							FHolmquistWallSegment Seg;
+							FDungeonWallSegment Seg;
 							Seg.Cell = FIntPoint(x, y);
 							Seg.Direction = 0;
 							Seg.WallActor = WallActor;
@@ -242,7 +242,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 								WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
 								WallActor->SetMobility(EComponentMobility::Static);
 
-							FHolmquistWallSegment Seg;
+							FDungeonWallSegment Seg;
 							Seg.Cell = FIntPoint(x, y);
 							Seg.Direction = 1;
 							Seg.WallActor = WallActor;
@@ -279,7 +279,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 								WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
 								WallActor->SetMobility(EComponentMobility::Static);
 
-							FHolmquistWallSegment Seg;
+							FDungeonWallSegment Seg;
 							Seg.Cell = FIntPoint(x, y);
 							Seg.Direction = 2;
 							Seg.WallActor = WallActor;
@@ -316,7 +316,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 								WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
 								WallActor->SetMobility(EComponentMobility::Static);
 
-							FHolmquistWallSegment Seg;
+							FDungeonWallSegment Seg;
 							Seg.Cell = FIntPoint(x, y);
 							Seg.Direction = 3;
 							Seg.WallActor = WallActor;
@@ -325,57 +325,6 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						}
 					}
 				}
-			}
-		}
-	}
-
-	//---- Pillars in Interior Gaps ----
-
-	if (bSpawnPillarsInGaps && WallMesh)
-	{
-		for (int32 y = 0; y < GridHeight; ++y)
-		{
-			for (int32 x = 0; x < GridWidth; ++x)
-			{
-				if (Grid[Index(x, y)]) continue;
-
-				//Count floor neighbors
-				int32 FloorNeighbors = 0;
-				const int32 DX[4] = {1, -1, 0, 0};
-				const int32 DY[4] = {0, 0, -1, 1};
-				
-				for (int32 i = 0; i < 4; ++i)
-				{
-					const int32 NX = x + DX[i];
-					const int32 NY = y + DY[i];
-
-					if (NX < 0 || NX >= GridWidth || NY < 0 || NY >= GridHeight) continue;
-
-					if (Grid[Index(NX, NY)]) ++FloorNeighbors;
-				}
-
-				//Only spawn pillars when it's a hole surrounded by floor
-				if (FloorNeighbors < 3) continue;
-
-				const FVector PillarPos = GetActorLocation() + FVector(x * TileSize, y * TileSize, FloorZ);
-
-				AStaticMeshActor* PillarActor = World->SpawnActor<AStaticMeshActor>(PillarPos, FRotator::ZeroRotator);
-				if (!PillarActor) continue;
-
-				UStaticMeshComponent* PComp = PillarActor->GetStaticMeshComponent();
-				if (!PComp)
-				{
-					PillarActor->Destroy();
-					continue;
-				}
-
-				PComp->SetStaticMesh(WallMesh);
-
-				const float XYScale = PillarSize / BaseSize;
-				const float ZScale = WallHeight / BaseSize;
-
-				PillarActor->SetActorScale3D(FVector(XYScale, XYScale, ZScale));
-				PillarActor->SetMobility(EComponentMobility::Static);
 			}
 		}
 	}
@@ -411,7 +360,7 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 	for (int32 d = 0; d < DoorCount && WallSegments.Num() > 0; ++d)
 	{
 		const int32 Index = Rng.RandRange(0, WallSegments.Num() - 1);
-		FHolmquistWallSegment Seg = WallSegments[Index];
+		FDungeonWallSegment Seg = WallSegments[Index];
 
 		AStaticMeshActor* WallActor = Seg.WallActor.Get();
 		if (!WallActor)

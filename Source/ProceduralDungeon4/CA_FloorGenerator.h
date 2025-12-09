@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "DungeonWallSegment.h"
 #include "CA_FloorGenerator.generated.h"
 
 UCLASS()
@@ -63,6 +64,28 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category = "CA")
 	float WallHeight = 200.f;
+
+	//All spawned Wall segments
+	UPROPERTY()
+	TArray<FDungeonWallSegment> WallSegments;
+
+	// MapWidth * MapHeight array of wall actors, indexed by cell
+    UPROPERTY()
+    TArray<TWeakObjectPtr<AStaticMeshActor>> WallActorMap;
+
+	// -- Doors --
+	
+	//How many doors to carve out
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	int32 DefaultDoorCount = 3;
+
+	//Mesh for the Doors
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	UStaticMesh* DoorMesh = nullptr;
+
+	//Random seed for reproducibility
+	UPROPERTY(EditAnywhere, Category = "Door")
+	int32 Seed = 12345;
 	
 private:
 	//Grid: true = wall, false = floor
@@ -86,6 +109,9 @@ private:
 	void CarveCorridorBetween(const FIntPoint& A, const FIntPoint& B);
 
 	void SpawnGeometry();
+
+	//Spawn the doors
+	void CreateDoors(int32 DoorCount);
 	
 
 public:	

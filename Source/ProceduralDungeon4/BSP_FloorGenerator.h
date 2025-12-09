@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "DungeonWallSegment.h"
 #include "BSP_FloorGenerator.generated.h"
 
 USTRUCT(BlueprintType)
@@ -29,6 +30,7 @@ struct FBSPLeaf
 	int32 Width() const { return Max.X - Min.X; }
 	int32 Height() const { return Max.Y - Min.Y; }
 };
+
 
 UCLASS()
 class PROCEDURALDUNGEON4_API ABSP_FloorGenerator : public AActor
@@ -88,6 +90,28 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "BSP|Walls")
 	float WallThickness = 50.f;
 
+	//All spawned Wall segments
+	UPROPERTY()
+	TArray<FDungeonWallSegment> WallSegments;
+
+	// -- Doors --
+	
+	//How many doors to carve out
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	int32 DefaultDoorCount = 1;
+
+	//Mesh for the Doors
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	UStaticMesh* DoorMesh = nullptr;
+
+	//Width of a door opening in world units
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	float DoorWidth = 200.f;
+
+	//Random seed for reproducibility
+	UPROPERTY(EditAnywhere, Category = "Room Gen")
+	int32 Seed = 12345;
+
 
 private:
 	//All leaf regions after BSP split
@@ -99,6 +123,9 @@ private:
 	void SplitSpace(const FBSPLeaf& Region, int32 Depth);
 
 	void SpawnFloorPlanes();
+
+	//Spawn the doors
+	void CreateDoors(int32 DoorCount);
 
 public:	
 	// Called every frame

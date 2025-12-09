@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "DungeonWallSegment.h"
 #include "Walk_FloorGenerator.generated.h"
 
 UCLASS()
@@ -42,16 +43,37 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Walker")
 	UStaticMesh* FloorMesh;
 
+    UPROPERTY(EditAnywhere, Category = "Walker")
+	float FloorZ = 0.f;
+
+	//All spawned Wall segments
+	UPROPERTY()
+	TArray<FDungeonWallSegment> WallSegments;
+
+	//Random seed for reproducibility
+	UPROPERTY(EditAnywhere, Category = "Room Gen")
+	int32 Seed = 12345;
+
+	// -- Walls --
+
 	//Wall mesh
     UPROPERTY(EditAnywhere, Category = "Walker")
 	UStaticMesh* WallMesh;
 
 	//Height offsets
-    UPROPERTY(EditAnywhere, Category = "Walker")
-	float FloorZ = 0.f;
 
     UPROPERTY(EditAnywhere, Category = "Walker")
-	float WallHeight = 200.f;	
+	float WallHeight = 200.f;
+
+	// -- Doors --
+	
+	//How many doors to carve out
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	int32 DefaultDoorCount = 3;
+
+	//Mesh for the Doors
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	UStaticMesh* DoorMesh = nullptr;
 
 public:	
 	// Called every frame
@@ -70,6 +92,7 @@ private:
 	void InitializeMap();
 	void RunRandomWalk();
 	void SpawnGeometry();
+	void CreateDoors(int32 DoorCount);
 
 	bool HasFloorNeighbor(int32 X, int32 Y) const;
 

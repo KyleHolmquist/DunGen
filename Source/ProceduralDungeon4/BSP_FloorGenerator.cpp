@@ -6,6 +6,13 @@
 #include "Engine/StaticMeshActor.h"
 #include "Kismet/KismetMathLibrary.h"
 
+enum EWallDir : uint8
+{
+	Bottom = 0,
+	Top = 1,
+	Left = 2,
+	Right = 3
+};
 
 
 // Sets default values
@@ -24,6 +31,8 @@ void ABSP_FloorGenerator::BeginPlay()
 	GenerateBSP();
 
 	SpawnFloorPlanes();
+
+	//CreateDoors(DefaultDoorCount);
 	
 }
 
@@ -140,11 +149,129 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 		return;
 	}
 
+	//RNG Setup
+	FRandomStream Rng;
+	if (Seed >= 0)
+	{
+		Rng.Initialize(Seed);
+	}
+	else
+	{
+		//Non-deterministic
+		Rng.GenerateNewSeed();
+	}
+
 	//Assume the plane and cube meshes are 100x100 units. Adjust if need be
 	const float BaseMeshSize = 100.f;
 
+	//Split a wall into two segments with a door-sized gap in the center
+	auto CarveDoorInWall = [&](AStaticMeshActor* WallActor, bool bHorizontal, float WallLength)
+	{
+		if (!WallActor || !WallMesh) return;
+
+		UWorld* LocalWorld = GetWorld();
+		if (!LocalWorld) return;
+
+		//Clamp door width so it  fits
+		float DoorWorldWidth = FMath::Clamp(DoorWidth, 0.f, WallLength - 10.f);
+		if (DoorWorldWidth <= 0.f) return;
+
+		const float DoorHalf   = DoorWorldWidth * 0.5f;
+		const float HalfLength = WallLength * 0.5f;
+
+		//Lengths of the left/right (or bottom/top) wall pieces
+		const float SideLength = (WallLength - DoorWorldWidth) * 0.5f;
+		if (SideLength <= 0.f)
+		{
+			//Wall is too short to carve a proper door
+			return;
+		}
+
+		const FVector WallCenter = WallActor->GetActorLocation();
+		const FRotator WallRot   = WallActor->GetActorRotation();
+
+		//Compute centers for the two wall segments
+		FVector CenterA = WallCenter;
+		FVector CenterB = WallCenter;
+
+		if (bHorizontal)
+		{
+			//Wall runs along X (bottom/top)
+			CenterA.X -= (DoorHalf + SideLength * 0.5f);
+			CenterB.X += (DoorHalf + SideLength * 0.5f);
+		}
+		else
+		{
+			//Wall runs along Y (left/right)
+			CenterA.Y -= (DoorHalf + SideLength * 0.5f);
+			CenterB.Y += (DoorHalf + SideLength * 0.5f);
+		}
+
+		auto SpawnWallSegment = [&](const FVector& Center)
+		{
+			AStaticMeshActor* Segment = LocalWorld->SpawnActor<AStaticMeshActor>(Center, WallRot);
+			if (!Segment) return;
+
+			if (UStaticMeshComponent* WComp = Segment->GetStaticMeshComponent())
+			{
+				WComp->SetStaticMesh(WallMesh);
+
+				const float SegmentX = bHorizontal ? SideLength : WallThickness;
+				const float SegmentY = bHorizontal ? WallThickness : SideLength;
+				const float ScaleX = SegmentX / BaseMeshSize;
+				const float ScaleY = SegmentY / BaseMeshSize;
+				const float ScaleZ = WallHeight / BaseMeshSize;
+
+				Segment->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
+				Segment->SetMobility(EComponentMobility::Static);
+			}
+			else
+			{
+				Segment->Destroy();
+			}
+		};
+
+		//Destroy the original long wall
+		WallActor->Destroy();
+
+		//Spawn the two shorter segments
+		SpawnWallSegment(CenterA);
+		SpawnWallSegment(CenterB);
+
+		//Spawn a door mesh in the middle of the gap (optional)
+		if (DoorMesh)
+		{
+			AStaticMeshActor* DoorActor = LocalWorld->SpawnActor<AStaticMeshActor>(WallCenter, WallRot);
+			if (DoorActor)
+			{
+				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
+				{
+					DoorComp->SetStaticMesh(DoorMesh);
+
+					const float DoorX = bHorizontal ? DoorWorldWidth   : WallThickness;
+					const float DoorY = bHorizontal ? WallThickness    : DoorWorldWidth;
+					const float ScaleX = DoorX / BaseMeshSize;
+					const float ScaleY = DoorY / BaseMeshSize;
+					const float ScaleZ = WallHeight / BaseMeshSize;
+
+					DoorActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
+					DoorActor->SetMobility(EComponentMobility::Static);
+				}
+				else
+				{
+					DoorActor->Destroy();
+				}
+			}
+		}
+	};
+
 	for (const FBSPLeaf& Leaf : LeafRegions)
 	{
+		AStaticMeshActor* BottomWallActor = nullptr;
+		AStaticMeshActor* TopWallActor = nullptr;
+		AStaticMeshActor* LeftWallActor = nullptr;
+		AStaticMeshActor* RightWallActor = nullptr;
+
 		const int32 LeafW = Leaf.Width();
 		const int32 LeafH = Leaf.Height();
 
@@ -231,10 +358,10 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 			);
 			const FVector WorldPos = GetActorLocation() + LocalPos;
 
-			AStaticMeshActor* Wall = World->SpawnActor<AStaticMeshActor>(WorldPos, FRotator::ZeroRotator);
-				if (Wall)
+			AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WorldPos, FRotator::ZeroRotator);
+				if (WallActor)
 				{
-					if (UStaticMeshComponent* WComp = Wall->GetStaticMeshComponent())
+					if (UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent())
 					{
 						WComp->SetStaticMesh(WallMesh);
 
@@ -242,12 +369,19 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 						const float ScaleY = WallThickness / BaseMeshSize;
 						const float ScaleZ = WallHeight / BaseMeshSize;
 
-						Wall->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
-						Wall->SetMobility(EComponentMobility::Static);
+						WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
+						WallActor->SetMobility(EComponentMobility::Static);
+						BottomWallActor = WallActor;
+
+						FDungeonWallSegment Seg;
+						Seg.Cell = FIntPoint(-1, -1);
+						Seg.Direction = 0;
+						Seg.WallActor = WallActor;
+						WallSegments.Add(Seg);
 					}
 					else
 					{
-						Wall->Destroy();
+						WallActor->Destroy();
 					}
 				}
 		}
@@ -261,10 +395,10 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 			);
 			const FVector WorldPos = GetActorLocation() + LocalPos;
 
-			AStaticMeshActor* Wall = World->SpawnActor<AStaticMeshActor>(WorldPos, FRotator::ZeroRotator);
-			if (!Wall) continue;
+			AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WorldPos, FRotator::ZeroRotator);
+			if (!WallActor) continue;
 
-			if (UStaticMeshComponent* WComp = Wall->GetStaticMeshComponent())
+			if (UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent())
 			{
 				WComp->SetStaticMesh(WallMesh);
 
@@ -272,12 +406,19 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 				const float ScaleY = WallThickness / BaseMeshSize;
 				const float ScaleZ = WallHeight / BaseMeshSize;
 
-				Wall->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
-				Wall->SetMobility(EComponentMobility::Static);
+				WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
+				WallActor->SetMobility(EComponentMobility::Static);
+				BottomWallActor = WallActor;
+
+				FDungeonWallSegment Seg;
+				Seg.Cell = FIntPoint(-1, -1);
+				Seg.Direction = 1;
+				Seg.WallActor = WallActor;
+				WallSegments.Add(Seg);
 			}
 			else
 			{
-				Wall->Destroy();
+				WallActor->Destroy();
 			}
 
 		}
@@ -294,11 +435,11 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 			//Yaw 90 so mesh's x-axis points along world y
 			const FRotator Rot(0.f, 90.f, 0.f);
 
-			AStaticMeshActor* Wall = World->SpawnActor<AStaticMeshActor>(WorldPos, Rot);
+			AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WorldPos, Rot);
 
-			if (!Wall) continue;
+			if (!WallActor) continue;
 
-			if (UStaticMeshComponent* WComp = Wall->GetStaticMeshComponent())
+			if (UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent())
 			{
 				WComp->SetStaticMesh(WallMesh);
 
@@ -306,12 +447,19 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 				const float ScaleY = WallThickness / BaseMeshSize;
 				const float ScaleZ = WallHeight / BaseMeshSize;
 
-				Wall->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
-				Wall->SetMobility(EComponentMobility::Static);
+				WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
+				WallActor->SetMobility(EComponentMobility::Static);
+				BottomWallActor = WallActor;
+
+				FDungeonWallSegment Seg;
+				Seg.Cell = FIntPoint(-1, -1);
+				Seg.Direction = 2;
+				Seg.WallActor = WallActor;
+				WallSegments.Add(Seg);
 			}
 			else
 			{
-				Wall->Destroy();
+				WallActor->Destroy();
 			}
 		}
 
@@ -326,10 +474,10 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
 			const FRotator Rot(0.f, 90.f, 0.f);
 
-			AStaticMeshActor* Wall = World->SpawnActor<AStaticMeshActor>(WorldPos, Rot);
-			if(!Wall) continue;
+			AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WorldPos, Rot);
+			if(!WallActor) continue;
 
-			if (UStaticMeshComponent* WComp = Wall->GetStaticMeshComponent())
+			if (UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent())
 			{
 				WComp->SetStaticMesh(WallMesh);
 
@@ -337,15 +485,109 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 				const float ScaleY = WallThickness / BaseMeshSize;
 				const float ScaleZ = WallHeight / BaseMeshSize;
 
-				Wall->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
-				Wall->SetMobility(EComponentMobility::Static);
+				WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
+				WallActor->SetMobility(EComponentMobility::Static);
+				BottomWallActor = WallActor;
+
+				FDungeonWallSegment Seg;
+				Seg.Cell = FIntPoint(-1, -1);
+				Seg.Direction = 3;
+				Seg.WallActor = WallActor;
+				WallSegments.Add(Seg);
 			}
 			else
 			{
-				Wall->Destroy();
+				WallActor->Destroy();
 			}
 		}
 
+		// -- Choose a wall and carve a door --
+
+		TArray<TPair<AStaticMeshActor*, bool>> CandidateWalls;
+        if (BottomWallActor) CandidateWalls.Add({BottomWallActor, true});  // horizontal
+        if (TopWallActor)    CandidateWalls.Add({TopWallActor,    true});
+        if (LeftWallActor)   CandidateWalls.Add({LeftWallActor,   false}); // vertical
+        if (RightWallActor)  CandidateWalls.Add({RightWallActor,  false});
+
+        if (CandidateWalls.Num() > 0 && DoorWidth > 0.f)
+        {
+            const int32 ChoiceIdx = Rng.RandRange(0, CandidateWalls.Num() - 1);
+            AStaticMeshActor* ChosenWall = CandidateWalls[ChoiceIdx].Key;
+            const bool bHorizontal = CandidateWalls[ChoiceIdx].Value;
+
+            const float WallLength = bHorizontal ? RoomWorldWidth : RoomWorldHeight;
+            CarveDoorInWall(ChosenWall, bHorizontal, WallLength);
+        }
+
+	}
+}
+
+void ABSP_FloorGenerator::CreateDoors(int32 DoorCount)
+{
+	if (DoorCount <= 0) return;
+
+	if (WallSegments.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: No wall segments to carve doors from!"));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	//Clamp to existing walls
+	DoorCount = FMath::Min(DoorCount, WallSegments.Num());
+
+	//Reuse Seed so doors are deterministic relative to layout, but offset so it doesn't affect shape generation
+	FRandomStream Rng;
+	if (Seed >= 0)
+	{
+		Rng.Initialize(Seed + 1337);
+	}
+	else
+	{
+		Rng.GenerateNewSeed();
+	}
+
+	for (int32 d = 0; d < DoorCount && WallSegments.Num() > 0; ++d)
+	{
+		const int32 Index = Rng.RandRange(0, WallSegments.Num() - 1);
+		FDungeonWallSegment Seg = WallSegments[Index];
+
+		AStaticMeshActor* WallActor = Seg.WallActor.Get();
+		if (!WallActor)
+		{
+			//Dead pointer, discard and retry
+			WallSegments.RemoveAtSwap(Index);
+			--d;
+			continue;
+		}
+
+		const FTransform WallTransform = WallActor->GetActorTransform();
+
+		//Remove the wall section
+		WallActor->Destroy();
+		WallSegments.RemoveAtSwap(Index);
+
+		//Spawn a door mesh
+		if (DoorMesh)
+		{
+			AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+
+			if (DoorActor)
+			{
+				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
+				{
+					DoorComp->SetStaticMesh(DoorMesh);
+					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
+					DoorActor->SetMobility(EComponentMobility::Static);
+				}
+				else
+				{
+					DoorActor->Destroy();
+				}
+			}
+		}
 	}
 }
 
