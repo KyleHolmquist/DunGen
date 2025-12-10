@@ -70,35 +70,47 @@ protected:
 	float FloorZ = 0.f;
 
 	// How much to shrink rooms inside each leaf (in grid cells)
-	UPROPERTY(EditAnywhere, Category = "BSP|Rooms")
+	UPROPERTY(EditAnywhere, Category = "Rooms")
 	int32 RoomPaddingMin = 1;
 
-	UPROPERTY(EditAnywhere, Category = "BSP|Rooms")
+	UPROPERTY(EditAnywhere, Category = "Rooms")
 	int32 RoomPaddingMax = 3;
 
 	// ---- Walls ----
 
 	//Mesh used for walls
-	UPROPERTY(EditAnywhere, Category = "BSP|Walls")
+	UPROPERTY(EditAnywhere, Category = "Walls")
 	UStaticMesh* WallMesh;
 	
 	//Height of walls
-	UPROPERTY(EditAnywhere, Category = "BSP|Walls")
+	UPROPERTY(EditAnywhere, Category = "Walls")
 	float WallHeight = 300.f;
 
 	//Thickness of the walls
-	UPROPERTY(EditAnywhere, Category = "BSP|Walls")
+	UPROPERTY(EditAnywhere, Category = "Walls")
 	float WallThickness = 50.f;
+
+	//Length of a single wall segment in grid cells
+	UPROPERTY(EditAnywhere, Category = "Walls")
+	int32 WallSegmentCells = 1;
 
 	//All spawned Wall segments
 	UPROPERTY()
 	TArray<FDungeonWallSegment> WallSegments;
 
+	// Which BSP room (leaf) each interior grid cell belongs to
+    UPROPERTY()
+    TMap<FIntPoint, int32> CellToRoomIndex;
+
 	// -- Doors --
 	
 	//How many doors to carve out
 	UPROPERTY(EditAnywhere, Category = "Doors")
-	int32 DefaultDoorCount = 1;
+	int32 DefaultDoorCount = 2;
+
+	//How many doors each room should have
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	int32 DoorsPerRoom = 2;
 
 	//Mesh for the Doors
 	UPROPERTY(EditAnywhere, Category = "Doors")
@@ -124,7 +136,7 @@ private:
 
 	void SpawnFloorPlanes();
 
-	//Spawn the doors
+	//Spawn both interior and exterior doors
 	void CreateDoors(int32 DoorCount);
 
 public:	
