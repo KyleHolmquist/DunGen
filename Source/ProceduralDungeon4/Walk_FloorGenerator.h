@@ -5,10 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "DungeonWallSegment.h"
+#include "FloorGeneratorBase.h"
 #include "Walk_FloorGenerator.generated.h"
 
 UCLASS()
-class PROCEDURALDUNGEON4_API AWalk_FloorGenerator : public AActor
+class PROCEDURALDUNGEON4_API AWalk_FloorGenerator : public AFloorGeneratorBase
 {
 	GENERATED_BODY()
 	

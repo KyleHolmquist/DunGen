@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "DungeonWallSegment.h"
+#include "FloorGeneratorBase.h"
 #include "BSP_FloorGenerator.generated.h"
 
 USTRUCT(BlueprintType)
@@ -33,7 +34,7 @@ struct FBSPLeaf
 
 
 UCLASS()
-class PROCEDURALDUNGEON4_API ABSP_FloorGenerator : public AActor
+class PROCEDURALDUNGEON4_API ABSP_FloorGenerator : public AFloorGeneratorBase
 {
 	GENERATED_BODY()
 	
