@@ -19,12 +19,17 @@ void ACA_FloorGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 
+	GenerateModule();
+	
+}
+
+void ACA_FloorGenerator::GenerateModule()
+{
 	InitializeMap();
 	RunSimulation();
 	EnsureConnectivity();
 	SpawnGeometry();
 	CreateDoors(DefaultDoorCount);
-	
 }
 
 void ACA_FloorGenerator::Tick(float DeltaTime)
@@ -545,6 +550,12 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 					DoorComp->SetStaticMesh(DoorMesh);
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
 					DoorActor->SetMobility(EComponentMobility::Static);
+
+					//Record the Door's info to ExteriorDoors array
+					FExteriorDoor Door;
+					Door.Location = DoorActor->GetActorLocation();
+					Door.Rotation = DoorActor->GetActorRotation();
+					ExteriorDoors.Add(Door);
 				}
 				else
 				{

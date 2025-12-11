@@ -5,7 +5,7 @@
 #include "FloorGeneratorBase.generated.h"
 
 USTRUCT(BlueprintType)
-struct FExternalDoorInfo
+struct FExteriorDoor
 {
     GENERATED_BODY()
 
@@ -22,19 +22,15 @@ class PROCEDURALDUNGEON4_API AFloorGeneratorBase : public AActor
     GENERATED_BODY()
 
 public:
-    
-    UPROPERTY(EditAnywhere, Category="Floor")
-    int32 GridWidth = 40;
+    AFloorGeneratorBase();
 
-    UPROPERTY(EditAnywhere, Category="Floor")
-    int32 GridHeight = 30;
-
-    UPROPERTY(EditAnywhere, Category="Floor")
-    float TileSize = 100.f;
+    //How many exterior doors this module tries to carve
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Dungeon")
+    int32 DesiredExteriorDoors = 2;
 
     //Filled by the generator when it creates exterior doors
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Floor")
-    TArray<FExternalDoorInfo> ExteriorDoors;
+    TArray<FExteriorDoor> ExteriorDoors;
 
     //Called by the Dungeon Manager instead of BeginPlay
     UFUNCTION(BlueprintCallable, Category="Floor")
@@ -44,8 +40,10 @@ public:
     UFUNCTION(BlueprintCallable, Category="Floor")
     virtual FBox GetFloorBounds() const PURE_VIRTUAL(AFloorGeneratorBase::GetFloorBounds, return FBox(EForceInit::ForceInitToZero););
 
-    void GetExteriorDoors(TArray<FExternalDoorInfo>& OutDoors) const
-    {
-        OutDoors = ExteriorDoors;
-    }
+    //Public getter function
+    const TArray<FExteriorDoor>& GetExteriorDoors() const { return ExteriorDoors;}
+
+    //Entry point the manager calls after spawn
+    UFUNCTION(BlueprintCallable, Category ="Dungeon")
+    virtual void GenerateModule();
 };

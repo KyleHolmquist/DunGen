@@ -28,12 +28,15 @@ void ABSP_FloorGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 
-	GenerateBSP();
-
-	SpawnFloorPlanes();
-
-	CreateDoors(DefaultDoorCount);
+	GenerateModule();
 	
+}
+
+void ABSP_FloorGenerator::GenerateModule()
+{
+	GenerateBSP();
+	SpawnFloorPlanes();
+	CreateDoors(DefaultDoorCount);
 }
 
 void ABSP_FloorGenerator::GenerateBSP()
@@ -659,9 +662,15 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 					FVector DoorScale = T.GetScale3D();
 					//Stretch the door mesh to cover all segments
 					DoorScale.X *= DoorSegments;
-					DoorActor->SetActorScale3D(DoorScale);
 
+					DoorActor->SetActorScale3D(DoorScale);
                     DoorActor->SetMobility(EComponentMobility::Static);
+
+					//Record the Door's info to ExteriorDoors array
+					FExteriorDoor Door;
+					Door.Location = DoorActor->GetActorLocation();
+					Door.Rotation = DoorActor->GetActorRotation();
+					ExteriorDoors.Add(Door);
                 }
                 else
                 {

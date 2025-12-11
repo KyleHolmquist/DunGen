@@ -46,6 +46,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void GenerateModule() override;
+
 	//Size of the whole map in grid cells
 	UPROPERTY(EditAnywhere, Category = "BSP")
 	FIntPoint MapSize = FIntPoint(40, 40);

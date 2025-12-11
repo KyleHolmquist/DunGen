@@ -18,11 +18,16 @@ void AHolmquist_FloorGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 
+	GenerateModule();
+	
+}
+
+void AHolmquist_FloorGenerator::GenerateModule()
+{
 	//Allocate Grid
 	GenerateRoomLayout();
 	SpawnFloorTiles();
 	CreateDoors(DefaultDoorCount);
-	
 }
 
 // Called every frame
@@ -389,6 +394,12 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 					DoorComp->SetStaticMesh(DoorMesh);
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
 					DoorActor->SetMobility(EComponentMobility::Static);
+
+					//Record the Door's info to ExteriorDoors array
+					FExteriorDoor Door;
+					Door.Location = DoorActor->GetActorLocation();
+					Door.Rotation = DoorActor->GetActorRotation();
+					ExteriorDoors.Add(Door);
 				}
 				else
 				{

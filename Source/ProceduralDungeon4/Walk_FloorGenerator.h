@@ -20,6 +20,8 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
+	virtual void GenerateModule() override;
 
 	//Grid Size
     UPROPERTY(EditAnywhere, Category = "Walker")
