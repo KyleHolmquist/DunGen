@@ -27,7 +27,12 @@ void AWalk_FloorGenerator::GenerateModule()
 {
 	GenerateMap();
 	SpawnGeometry();
-	CreateDoors(DefaultDoorCount);
+
+	const int32 DoorCount = (DesiredExteriorDoors > 0) ? DesiredExteriorDoors : DefaultDoorCount;
+
+	CreateDoors(DoorCount);
+
+	bHasFinishedGenerating = true;
 }
 
 // Called every frame
@@ -155,6 +160,9 @@ void AWalk_FloorGenerator::SpawnGeometry()
 				AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(Pos, FRotator::ZeroRotator);
 				if (!FloorActor) continue;
 
+				FloorActor->SetMobility(EComponentMobility::Movable);
+				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 				UStaticMeshComponent* MeshComp = FloorActor->GetStaticMeshComponent();
 				if(!MeshComp)
 				{
@@ -166,7 +174,6 @@ void AWalk_FloorGenerator::SpawnGeometry()
 
 				const float Scale = TileSize / BasePlaneSize;
 				FloorActor->SetActorScale3D(FVector(Scale, Scale, 1.f));
-				FloorActor->SetMobility(EComponentMobility::Static);
 			}
 			//Walls
 			else if (bIsWall && WallMesh)
@@ -177,6 +184,9 @@ void AWalk_FloorGenerator::SpawnGeometry()
 
 				AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(Pos, FRotator::ZeroRotator);
 				if (!WallActor) continue;
+
+				WallActor->SetMobility(EComponentMobility::Movable);
+				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 				UStaticMeshComponent* MeshComp = WallActor->GetStaticMeshComponent();
 				if (!MeshComp)
@@ -190,7 +200,6 @@ void AWalk_FloorGenerator::SpawnGeometry()
 				const float XYScale = TileSize / BasePlaneSize;
 				const float ZScale = WallHeight / BasePlaneSize;
 				WallActor->SetActorScale3D(FVector(XYScale, XYScale, ZScale));
-				WallActor->SetMobility(EComponentMobility::Static);
 				
 				//Check how many neighbors the floor cell has, to determine if it's an outer wall cell or not
 				int32 FloorNeighbors = 0;
@@ -302,10 +311,15 @@ void AWalk_FloorGenerator::CreateDoors(int32 DoorCount)
 
 		const FTransform WallTransform = WallActor->GetActorTransform();
 
+		//Record the door so DungeonManager can use it
+		FExteriorDoor DoorInfo;
+		DoorInfo.Location = WallTransform.GetLocation();
+		DoorInfo.Rotation = WallTransform.GetRotation().Rotator();
+		ExteriorDoors.Add(DoorInfo);
+
 		//Remove the wall section
 		WallActor->Destroy();
 		WallSegments.RemoveAtSwap(Index);
-
 		//Spawn a door mesh
 		if (DoorMesh)
 		{
@@ -313,17 +327,13 @@ void AWalk_FloorGenerator::CreateDoors(int32 DoorCount)
 
 			if (DoorActor)
 			{
+				DoorActor->SetMobility(EComponentMobility::Movable);
+				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
 				{
 					DoorComp->SetStaticMesh(DoorMesh);
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
-					DoorActor->SetMobility(EComponentMobility::Static);
-
-					//Record the Door's info to ExteriorDoors array
-					FExteriorDoor Door;
-					Door.Location = DoorActor->GetActorLocation();
-					Door.Rotation = DoorActor->GetActorRotation();
-					ExteriorDoors.Add(Door);
 				}
 				else
 				{

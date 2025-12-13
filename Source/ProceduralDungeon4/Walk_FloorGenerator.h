@@ -23,12 +23,12 @@ protected:
 	
 	virtual void GenerateModule() override;
 
-	//Grid Size
-    UPROPERTY(EditAnywhere, Category = "Walker")
-	int32 MapWidth = 60;
+	// //Grid Size
+    // UPROPERTY(EditAnywhere, Category = "Walker")
+	// int32 MapWidth = 60;
 	
-    UPROPERTY(EditAnywhere, Category = "Walker")
-	int32 MapHeight = 40;
+    // UPROPERTY(EditAnywhere, Category = "Walker")
+	// int32 MapHeight = 40;
 
 	//Number of random walk steps to take
     UPROPERTY(EditAnywhere, Category = "Walker")
@@ -38,9 +38,9 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Walker")
 	bool bStartInCenter = true;
 
-	//Size of a tile in world units
-    UPROPERTY(EditAnywhere, Category = "Walker")
-	float TileSize = 100.f;
+	// //Size of a tile in world units
+    // UPROPERTY(EditAnywhere, Category = "Walker")
+	// float TileSize = 100.f;
 
 	//Mesh to use for floor cells
     UPROPERTY(EditAnywhere, Category = "Walker")

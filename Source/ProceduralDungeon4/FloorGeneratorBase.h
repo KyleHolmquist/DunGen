@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Components/SceneComponent.h"
 #include "FloorGeneratorBase.generated.h"
 
 USTRUCT(BlueprintType)
@@ -14,6 +15,13 @@ struct FExteriorDoor
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FRotator Rotation = FRotator::ZeroRotator;
+
+    // Stored relative to the module actor
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FVector LocalLocation = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FRotator LocalRotation = FRotator::ZeroRotator;
 };
 
 UCLASS(Abstract)
@@ -24,9 +32,27 @@ class PROCEDURALDUNGEON4_API AFloorGeneratorBase : public AActor
 public:
     AFloorGeneratorBase();
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Floor")
+    int32 MapWidth = 40;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Floor")
+    int32 MapHeight = 40;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Floor")
+    float TileSize = 100.f;
+
     //How many exterior doors this module tries to carve
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Dungeon")
     int32 DesiredExteriorDoors = 2;
+
+    UPROPERTY()
+    USceneComponent* Root = nullptr;
+
+    // Adds a door using a world-space transform; stores it in local space.
+    void AddExteriorDoorWorld(const FVector& WorldLocation, const FRotator& WorldRotation);
+
+    // Returns doors in world space (computed from stored local data).
+    TArray<FExteriorDoor> GetExteriorDoorsWorld() const;
 
     //Filled by the generator when it creates exterior doors
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Floor")
@@ -46,4 +72,13 @@ public:
     //Entry point the manager calls after spawn
     UFUNCTION(BlueprintCallable, Category ="Dungeon")
     virtual void GenerateModule();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Dungeon")
+    bool bGenerateOnBeginPlay = true;
+
+    UPROPERTY(BlueprintReadOnly)
+    bool bHasFinishedGenerating = false;
+
+protected:
+    virtual void BeginPlay() override;
 };

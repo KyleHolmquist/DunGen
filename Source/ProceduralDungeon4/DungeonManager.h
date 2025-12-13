@@ -38,6 +38,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Dungeon")
 	float ModuleSeparation = 2000.f;
 
+	UPROPERTY(EditAnywhere, Category="Dungeon")
+	float MinGapBetweenModules = 400.f;
+
 	//Corridor meshes
 	UPROPERTY(EditAnywhere, Category="Dungeon")
 	UStaticMesh* CorridorFloorMesh;
@@ -45,12 +48,29 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Dungeon")
 	UStaticMesh* CorridorWallMesh;
 
+	// -- Corridors --
+	bool AlignSecondModuleToFirst(AFloorGeneratorBase* ModuleA, AFloorGeneratorBase* ModuleB, FExteriorDoor& OutDoorA, FExteriorDoor& OutDoorB);
+	void BuildTiledCorridor(const FVector& FromWorld, const FVector& ToWorld, float TileSize, float Z);
+
 private:
+
+	AFloorGeneratorBase* FirstModule = nullptr;
+	AFloorGeneratorBase* SecondModule = nullptr;
+
 	AFloorGeneratorBase* SpawnModule(TSubclassOf<AFloorGeneratorBase> ModuleClass, const FVector& Location, int32 DesiredDoors);
+	
+
+    UFUNCTION(BlueprintCallable, Category="Dungeon")
+    AFloorGeneratorBase* SpawnConfiguredModule(
+        TSubclassOf<AFloorGeneratorBase> ModuleClass,
+        const FTransform& SpawnTransform,
+        int32 InMapWidth,
+        int32 InMapHeight,
+        int32 InDoorCount
+    );
 
 	void ConnectModulesWithCorridor(AFloorGeneratorBase* A, AFloorGeneratorBase* B);
-
-	void BuildStraightCorridor(const FVector& From, const FVector& To);
+	void TryConnectModules();
 
 public:	
 	// Called every frame

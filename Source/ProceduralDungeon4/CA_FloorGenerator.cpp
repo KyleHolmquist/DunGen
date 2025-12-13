@@ -21,6 +21,7 @@ void ACA_FloorGenerator::BeginPlay()
 
 	GenerateModule();
 	
+	
 }
 
 void ACA_FloorGenerator::GenerateModule()
@@ -29,7 +30,12 @@ void ACA_FloorGenerator::GenerateModule()
 	RunSimulation();
 	EnsureConnectivity();
 	SpawnGeometry();
-	CreateDoors(DefaultDoorCount);
+
+	const int32 DoorCount = (DesiredExteriorDoors > 0) ? DesiredExteriorDoors : DefaultDoorCount;
+
+	CreateDoors(DoorCount);
+
+	bHasFinishedGenerating = true;
 }
 
 void ACA_FloorGenerator::Tick(float DeltaTime)
@@ -175,6 +181,9 @@ void ACA_FloorGenerator::SpawnGeometry()
 				AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(WorldPos, FRotator::ZeroRotator);
 				if (!FloorActor) continue;
 
+				FloorActor->SetMobility(EComponentMobility::Movable);
+				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 				UStaticMeshComponent* MeshComp = FloorActor->GetStaticMeshComponent();
 				if (!MeshComp)
 				{
@@ -187,7 +196,6 @@ void ACA_FloorGenerator::SpawnGeometry()
 				//Center the tile
 				const float ScaleFactor = TileSize / BasePlaneSize;
 				FloorActor->SetActorScale3D(FVector(ScaleFactor, ScaleFactor, 1.f));
-				FloorActor->SetMobility(EComponentMobility::Static);
 			}
 
 			//Spawn wall mesh where there's a wall
@@ -197,6 +205,9 @@ void ACA_FloorGenerator::SpawnGeometry()
 
 				AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, FRotator::ZeroRotator);
 				if (!WallActor) continue;
+
+				WallActor->SetMobility(EComponentMobility::Movable);
+				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 				UStaticMeshComponent* MeshComp = WallActor->GetStaticMeshComponent();
 				if (!MeshComp)
@@ -212,7 +223,6 @@ void ACA_FloorGenerator::SpawnGeometry()
 				const float ZScale = WallHeight / BasePlaneSize;
 
 				WallActor->SetActorScale3D(FVector(XYScale, XYScale, ZScale));
-				WallActor->SetMobility(EComponentMobility::Static);
 
 				//Remember this wall actor at (x, y)
 				WallActorMap[Index(x, y)] = WallActor;
@@ -452,6 +462,8 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 			continue;
 		}
 
+		WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 		const FTransform WallTransform = WallActor->GetActorTransform();
 
 		//Grid coordinates
@@ -514,11 +526,13 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 
 					if (FloorActor)
 					{
+						FloorActor->SetMobility(EComponentMobility::Movable);
+						FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 						if (UStaticMeshComponent* FloorComp = FloorActor->GetStaticMeshComponent())
 						{
 							FloorComp->SetStaticMesh(FloorMesh);
 							FloorActor->SetActorScale3D(FVector(ScaleFactor, ScaleFactor, 1.f));
-							FloorActor->SetMobility(EComponentMobility::Static);
 						}
 						else
 						{
@@ -538,6 +552,14 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 			}
 		}
 
+		//Record the door so DungeonManager can use it
+		// FExteriorDoor DoorInfo;
+		// const FVector DoorOffset = FVector(DirX * TileSize * 0.5f, DirY * TileSize * 0.5f, 0.f);
+		// DoorInfo.Location = WallTransform.GetLocation() + DoorOffset;
+		// DoorInfo.Rotation = WallTransform.GetRotation().Rotator();
+		// ExteriorDoors.Add(DoorInfo);
+		AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+
 		//Spawn a door mesh
 		if (DoorMesh)
 		{
@@ -545,17 +567,13 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 
 			if (DoorActor)
 			{
+				DoorActor->SetMobility(EComponentMobility::Movable);
+				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
 				{
 					DoorComp->SetStaticMesh(DoorMesh);
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
-					DoorActor->SetMobility(EComponentMobility::Static);
-
-					//Record the Door's info to ExteriorDoors array
-					FExteriorDoor Door;
-					Door.Location = DoorActor->GetActorLocation();
-					Door.Rotation = DoorActor->GetActorRotation();
-					ExteriorDoors.Add(Door);
 				}
 				else
 				{
@@ -565,3 +583,4 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 		}
 	}
 }
+

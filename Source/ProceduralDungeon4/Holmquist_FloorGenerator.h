@@ -27,20 +27,20 @@ protected:
 
 	// -- Floor --
 
-	//Dimensions of the grid in cells
-	UPROPERTY(EditAnywhere, Category = "Room Gen")
-	int32 GridWidth = 20;
+	// //Dimensions of the grid in cells
+	// UPROPERTY(EditAnywhere, Category = "Room Gen")
+	// int32 GridWidth = 20;
 	
-	UPROPERTY(EditAnywhere, Category = "Room Gen")
-	int32 GridHeight = 20;
+	// UPROPERTY(EditAnywhere, Category = "Room Gen")
+	// int32 GridHeight = 20;
 
 	//Target number of floor tiles to carve
 	UPROPERTY(EditAnywhere, Category = "Room Gen")
 	int NumTiles = 50;
 
-	//Size of each tile in world units
-	UPROPERTY(EditAnywhere, Category = "Room Gen")
-	float TileSize = 400.f;
+	// //Size of each tile in world units
+	// UPROPERTY(EditAnywhere, Category = "Room Gen")
+	// float TileSize = 400.f;
 
 	//Random seed for reproducibility
 	UPROPERTY(EditAnywhere, Category = "Room Gen")
@@ -92,7 +92,7 @@ protected:
 
 	FORCEINLINE int32 Index(int32 X, int32 Y) const
 	{
-		return Y * GridWidth + X;
+		return Y * MapWidth + X;
 	}
 
 	//---- Pipeline ----

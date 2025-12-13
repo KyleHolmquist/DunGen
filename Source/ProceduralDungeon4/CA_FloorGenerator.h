@@ -17,6 +17,18 @@ public:
 	// Sets default values for this actor's properties
 	ACA_FloorGenerator();
 
+	//How many simulation steps to run
+	UPROPERTY(EditAnywhere, Category = "CA")
+	int32 SimulationSteps = 5;
+	
+	//If a cell is wall and has < DeathLimit neighbors => becomes floor
+	//if a cell is floor and has > BirthLimit neighbors => becomes wall
+	UPROPERTY(EditAnywhere, Category = "CA")
+	int32 BirthLimit = 4;
+	
+	UPROPERTY(EditAnywhere, Category = "CA")
+	int32 DeathLimit = 3;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -25,33 +37,22 @@ protected:
 
 	// ---- Grid / CA Settings ----
 
-	//Grid size in cells
-	UPROPERTY(EditAnywhere, Category = "CA")
-	int32 MapWidth = 60;
+	// //Grid size in cells
+	// UPROPERTY(EditAnywhere, Category = "CA")
+	// int32 MapWidth = 60;
 	
-	UPROPERTY(EditAnywhere, Category = "CA")
-	int32 MapHeight = 40;
+	// UPROPERTY(EditAnywhere, Category = "CA")
+	// int32 MapHeight = 40;
 	
 	//% chance for a cell to start as a wall (0-100)
 	UPROPERTY(EditAnywhere, Category = "CA")
 	int32 InitWallChance = 45;
 
-	//How many simulation steps to run
-	UPROPERTY(EditAnywhere, Category = "CA")
-	int32 SimulationSteps = 5;
-
 	//Classic cave rules:
-	//If a cell is wall and has < DeathLimit neighbors => becomes floor
-	//if a cell is floor and has > BirthLimit neighbors => becomes wall
-	UPROPERTY(EditAnywhere, Category = "CA")
-	int32 BirthLimit = 4;
 	
-	UPROPERTY(EditAnywhere, Category = "CA")
-	int32 DeathLimit = 3;
-	
-	//Size of each cell in world units (cm)
-	UPROPERTY(EditAnywhere, Category = "CA")
-	float TileSize = 100.f;
+	// //Size of each cell in world units (cm)
+	// UPROPERTY(EditAnywhere, Category = "CA")
+	// float TileSize = 100.f;
 
 	//Mesh used for each floor tile
 	UPROPERTY(EditAnywhere, Category = "CA")

@@ -42,16 +42,6 @@ public:
 	// Sets default values for this actor's properties
 	ABSP_FloorGenerator();
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-	virtual void GenerateModule() override;
-
-	//Size of the whole map in grid cells
-	UPROPERTY(EditAnywhere, Category = "BSP")
-	FIntPoint MapSize = FIntPoint(40, 40);
-
 	//Minimum leaf size in cells
 	UPROPERTY(EditAnywhere, Category = "BSP")
 	int32 MinLeafSize = 8;
@@ -60,9 +50,19 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "BSP")
 	int32 MaxDepth = 5;
 
-	//Size of one grid cell in world units (cm)
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+	virtual void GenerateModule() override;
+
+	//Size of the whole map in grid cells
 	UPROPERTY(EditAnywhere, Category = "BSP")
-	float TileSize = 100.f;
+	FIntPoint MapSize = FIntPoint(MapWidth, MapHeight);
+
+	// //Size of one grid cell in world units (cm)
+	// UPROPERTY(EditAnywhere, Category = "BSP")
+	// float TileSize = 100.f;
 
 	//Plane mesh to use for each room floor
 	UPROPERTY(EditAnywhere, Category = "BSP")

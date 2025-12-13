@@ -27,7 +27,12 @@ void AHolmquist_FloorGenerator::GenerateModule()
 	//Allocate Grid
 	GenerateRoomLayout();
 	SpawnFloorTiles();
-	CreateDoors(DefaultDoorCount);
+
+	const int32 DoorCount = (DesiredExteriorDoors > 0) ? DesiredExteriorDoors : DefaultDoorCount;
+
+	CreateDoors(DoorCount);
+
+	bHasFinishedGenerating = true;
 }
 
 // Called every frame
@@ -40,7 +45,7 @@ void AHolmquist_FloorGenerator::Tick(float DeltaTime)
 void AHolmquist_FloorGenerator::GenerateRoomLayout()
 {
 	//Clear state
-	const int32 NumCells = GridWidth * GridHeight;
+	const int32 NumCells = MapWidth * MapHeight;
 	if (NumCells <= 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Holmquist_FloorGenerator: Invalid grid size"));
@@ -63,8 +68,8 @@ void AHolmquist_FloorGenerator::GenerateRoomLayout()
 	}
 
 	//Choose starting cell at center of grid
-	const int32 StartX = GridWidth / 2;
-	const int32 StartY = GridHeight / 2;
+	const int32 StartX = MapWidth / 2;
+	const int32 StartY = MapHeight / 2;
 
 	Grid[Index(StartX, StartY)] = true;
 	Frontier.Add(FIntPoint(StartX, StartY));
@@ -94,7 +99,7 @@ void AHolmquist_FloorGenerator::GenerateRoomLayout()
 			const int32 NY = Y + DY[i];
 
 			//Stay inside the grid
-			if (NX < 0 || NX >= GridWidth || NY < 0 || NY >= GridHeight) continue;
+			if (NX < 0 || NX >= MapWidth || NY < 0 || NY >= MapHeight) continue;
 
 			if (!Grid[Index(NX, NY)])
 			{
@@ -140,9 +145,9 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 
 	//---- Floors and Edge Walls ----
 
-	for (int32 y = 0; y < GridHeight; ++y)
+	for (int32 y = 0; y < MapHeight; ++y)
 	{
-		for (int32 x = 0; x < GridWidth; ++x)
+		for (int32 x = 0; x < MapWidth; ++x)
 		{
 			const bool bIsFloor = Grid[Index(x, y)];
 			const FVector TileCenter = (GetActorLocation() + FVector(x * TileSize, y * TileSize, 0.f));
@@ -153,6 +158,9 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 				const FVector FloorPos = TileCenter + FVector(0.f, 0.f, FloorZ);
 				AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(FloorPos, FRotator::ZeroRotator);
 				if (!FloorActor) continue;
+
+				FloorActor->SetMobility(EComponentMobility::Movable);
+				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 				UStaticMeshComponent* MeshComp = FloorActor->GetStaticMeshComponent();
 				if (!MeshComp)
@@ -165,7 +173,6 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 
 				const float FloorScale = TileSize / BaseSize;
 				FloorActor->SetActorScale3D(FVector(FloorScale, FloorScale, 1.f));
-				FloorActor->SetMobility(EComponentMobility::Static);
 			}
 
 			//---- Walls around Floor ----
@@ -177,7 +184,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 			// Helper lambda to ask "is there floor at (NX, NY)?"
 			auto HasFloorAt = [&](int32 NX, int32 NY) -> bool
 			{
-				if (NX < 0 || NX >= GridWidth || NY < 0 || NY >= GridHeight)
+				if (NX < 0 || NX >= MapWidth || NY < 0 || NY >= MapHeight)
 				{
 					return false;
 				}
@@ -195,6 +202,9 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 					AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, Rot);
 					if (WallActor)
 					{
+						WallActor->SetMobility(EComponentMobility::Movable);
+						WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 						UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent();
 						if (!WComp)
 						{
@@ -209,7 +219,6 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 							const float ScaleZ = WallHeight    / BaseSize; // height
 
 							WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
-							WallActor->SetMobility(EComponentMobility::Static);
 
 							FDungeonWallSegment Seg;
 							Seg.Cell = FIntPoint(x, y);
@@ -231,6 +240,9 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, Rot);
 						if (WallActor)
 						{
+							WallActor->SetMobility(EComponentMobility::Movable);
+							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 							UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent();
 							if (!WComp)
 							{
@@ -245,7 +257,6 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 								const float ScaleZ = WallHeight    / BaseSize;
 
 								WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
-								WallActor->SetMobility(EComponentMobility::Static);
 
 							FDungeonWallSegment Seg;
 							Seg.Cell = FIntPoint(x, y);
@@ -268,6 +279,9 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, Rot);
 						if (WallActor)
 						{
+							WallActor->SetMobility(EComponentMobility::Movable);
+							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 							UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent();
 							if (!WComp)
 							{
@@ -282,7 +296,6 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 								const float ScaleZ = WallHeight    / BaseSize;
 
 								WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
-								WallActor->SetMobility(EComponentMobility::Static);
 
 							FDungeonWallSegment Seg;
 							Seg.Cell = FIntPoint(x, y);
@@ -305,6 +318,9 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, Rot);
 						if (WallActor)
 						{
+							WallActor->SetMobility(EComponentMobility::Movable);
+							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 							UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent();
 							if (!WComp)
 							{
@@ -319,7 +335,6 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 								const float ScaleZ = WallHeight    / BaseSize;
 
 								WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
-								WallActor->SetMobility(EComponentMobility::Static);
 
 							FDungeonWallSegment Seg;
 							Seg.Cell = FIntPoint(x, y);
@@ -378,6 +393,12 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 
 		const FTransform WallTransform = WallActor->GetActorTransform();
 
+		//Record the door so DungeonManager can use it
+		FExteriorDoor DoorInfo;
+		DoorInfo.Location = WallTransform.GetLocation();
+		DoorInfo.Rotation = WallTransform.GetRotation().Rotator();
+		ExteriorDoors.Add(DoorInfo);
+
 		//Remove the wall section
 		WallActor->Destroy();
 		WallSegments.RemoveAtSwap(Index);
@@ -389,11 +410,13 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 
 			if (DoorActor)
 			{
+				DoorActor->SetMobility(EComponentMobility::Movable);
+				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
 				{
 					DoorComp->SetStaticMesh(DoorMesh);
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
-					DoorActor->SetMobility(EComponentMobility::Static);
 
 					//Record the Door's info to ExteriorDoors array
 					FExteriorDoor Door;

@@ -36,15 +36,20 @@ void ABSP_FloorGenerator::GenerateModule()
 {
 	GenerateBSP();
 	SpawnFloorPlanes();
-	CreateDoors(DefaultDoorCount);
+
+	const int32 DoorCount = (DesiredExteriorDoors > 0) ? DesiredExteriorDoors : DefaultDoorCount;
+
+	CreateDoors(DoorCount);
+
+	bHasFinishedGenerating = true;
 }
 
 void ABSP_FloorGenerator::GenerateBSP()
 {
 	LeafRegions.Empty();
 
-	FBSPLeaf Root(FIntPoint(0, 0), MapSize);
-	SplitSpace(Root, 0);
+	FBSPLeaf BSPRoot(FIntPoint(0, 0), MapSize);
+	SplitSpace(BSPRoot, 0);
 
 }
 
@@ -213,12 +218,14 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
         // -- Floor --
         AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(FloorLocation, FRotator::ZeroRotator);
         if (!FloorActor) continue;
+		
+		FloorActor->SetMobility(EComponentMobility::Movable);
+		FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
         if (UStaticMeshComponent* MeshComp = FloorActor->GetStaticMeshComponent())
         {
             MeshComp->SetStaticMesh(FloorMesh);
             FloorActor->SetActorScale3D(FloorScale);
-            FloorActor->SetMobility(EComponentMobility::Static);
         }
         else
         {
@@ -238,6 +245,9 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
             AStaticMeshActor* Segment = World->SpawnActor<AStaticMeshActor>(Location, Rot);
             if (!Segment) return nullptr;
 
+            Segment->SetMobility(EComponentMobility::Movable);
+			Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
             UStaticMeshComponent* WComp = Segment->GetStaticMeshComponent();
             if (!WComp)
             {
@@ -255,7 +265,6 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
             const float ScaleZ = WallHeight   / BaseMeshSize;
 
             Segment->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
-            Segment->SetMobility(EComponentMobility::Static);
             return Segment;
         };
 
@@ -275,7 +284,9 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
                 if (AStaticMeshActor* Segment = SpawnWallSegment(Loc, Rot))
                 {
-                    FDungeonWallSegment Seg;
+					Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+                    
+					FDungeonWallSegment Seg;
                     Seg.Cell      = FIntPoint(TileX, RoomMinY);
                     Seg.Direction = (uint8)EWallDir::Bottom;
                     Seg.WallActor = Segment;
@@ -290,7 +301,9 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
                 if (AStaticMeshActor* Segment = SpawnWallSegment(Loc, Rot))
                 {
-                    FDungeonWallSegment Seg;
+					Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+                    
+					FDungeonWallSegment Seg;
                     Seg.Cell      = FIntPoint(TileX, RoomMaxY - 1);
                     Seg.Direction = (uint8)EWallDir::Top;
                     Seg.WallActor = Segment;
@@ -315,6 +328,8 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
                 if (AStaticMeshActor* Segment = SpawnWallSegment(Loc, Rot))
                 {
+					Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
                     FDungeonWallSegment Seg;
                     Seg.Cell      = FIntPoint(RoomMinX, TileY);
                     Seg.Direction = (uint8)EWallDir::Left;
@@ -330,6 +345,8 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
                 if (AStaticMeshActor* Segment = SpawnWallSegment(Loc, Rot))
                 {
+					Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
                     FDungeonWallSegment Seg;
                     Seg.Cell      = FIntPoint(RoomMaxX - 1, TileY);
                     Seg.Direction = (uint8)EWallDir::Right;
@@ -610,10 +627,12 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
             //Door mesh
             if (DoorMesh)
             {
-                AStaticMeshActor* DoorActor =
-                    World->SpawnActor<AStaticMeshActor>(T.GetLocation(), T.GetRotation().Rotator());
+                AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(T.GetLocation(), T.GetRotation().Rotator());
                 if (DoorActor)
                 {
+					DoorActor->SetMobility(EComponentMobility::Movable);
+					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
                     if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
                     {
                         DoorComp->SetStaticMesh(DoorMesh);
@@ -623,7 +642,6 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 						DoorScale.X *= DoorSegments;
                         DoorActor->SetActorScale3D(DoorScale);
 
-                        DoorActor->SetMobility(EComponentMobility::Static);
                     }
                     else
                     {
@@ -650,11 +668,20 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
         const FTransform T = Seg.WallActor->GetActorTransform();
         DestroySegmentAndOpposite(SegIndex);
 
+		//Record the door so DungeonManager can use it
+		FExteriorDoor DoorInfo;
+		DoorInfo.Location = T.GetLocation();
+		DoorInfo.Rotation = T.GetRotation().Rotator();
+		ExteriorDoors.Add(DoorInfo);
+
         if (DoorMesh)
         {
             AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(T.GetLocation(), T.GetRotation().Rotator());
             if (DoorActor)
             {
+				DoorActor->SetMobility(EComponentMobility::Movable);
+				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
                 if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
                 {
                     DoorComp->SetStaticMesh(DoorMesh);
@@ -664,19 +691,15 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 					DoorScale.X *= DoorSegments;
 
 					DoorActor->SetActorScale3D(DoorScale);
-                    DoorActor->SetMobility(EComponentMobility::Static);
-
-					//Record the Door's info to ExteriorDoors array
-					FExteriorDoor Door;
-					Door.Location = DoorActor->GetActorLocation();
-					Door.Rotation = DoorActor->GetActorRotation();
-					ExteriorDoors.Add(Door);
+                    
                 }
                 else
                 {
                     DoorActor->Destroy();
                 }
             }
+
+			UE_LOG(LogTemp, Warning, TEXT(" created %d exterior doors"), ExteriorDoors.Num());
         }
     }
 }
