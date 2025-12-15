@@ -44,6 +44,12 @@ public:
     //How many exterior doors this module tries to carve
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Dungeon")
     int32 DesiredExteriorDoors = 2;
+    UPROPERTY(VisibleAnywhere)
+    FBox ModuleBoundsLocal;
+
+    //Deterministic module bounds
+    UFUNCTION(BlueprintCallable, Category="Dungeon")
+    FBox GetModuleBoundsWorld(float ZMin, float ZMax) const;
 
     UPROPERTY()
     USceneComponent* Root = nullptr;
@@ -78,6 +84,7 @@ public:
 
     UPROPERTY(BlueprintReadOnly)
     bool bHasFinishedGenerating = false;
+
 
 protected:
     virtual void BeginPlay() override;

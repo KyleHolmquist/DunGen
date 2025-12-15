@@ -394,10 +394,11 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 		const FTransform WallTransform = WallActor->GetActorTransform();
 
 		//Record the door so DungeonManager can use it
-		FExteriorDoor DoorInfo;
-		DoorInfo.Location = WallTransform.GetLocation();
-		DoorInfo.Rotation = WallTransform.GetRotation().Rotator();
-		ExteriorDoors.Add(DoorInfo);
+		// FExteriorDoor DoorInfo;
+		// DoorInfo.Location = WallTransform.GetLocation();
+		// DoorInfo.Rotation = WallTransform.GetRotation().Rotator();
+		// ExteriorDoors.Add(DoorInfo);
+		AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
 
 		//Remove the wall section
 		WallActor->Destroy();

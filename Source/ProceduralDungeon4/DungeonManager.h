@@ -27,6 +27,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Dungeon")
 	TSubclassOf<AFloorGeneratorBase> SecondModuleClass;
 
+	//Tile Size
+	UPROPERTY(EditAnywhere, Category="Dungeon")
+	int32 MapWidth = 30; 
+	UPROPERTY(EditAnywhere, Category="Dungeon")
+	int32 MapHeight = 30;
+
 	//Desired doors
 	UPROPERTY(EditAnywhere, Category="Dungeon")
 	int32 FirstModuleDoors = 2;
@@ -36,7 +42,7 @@ protected:
 
 	//How far to separate modules so they don't overlap
 	UPROPERTY(EditAnywhere, Category="Dungeon")
-	float ModuleSeparation = 2000.f;
+	float ModuleSeparation = 400.f;
 
 	UPROPERTY(EditAnywhere, Category="Dungeon")
 	float MinGapBetweenModules = 400.f;
@@ -49,8 +55,11 @@ protected:
 	UStaticMesh* CorridorWallMesh;
 
 	// -- Corridors --
-	bool AlignSecondModuleToFirst(AFloorGeneratorBase* ModuleA, AFloorGeneratorBase* ModuleB, FExteriorDoor& OutDoorA, FExteriorDoor& OutDoorB);
-	void BuildTiledCorridor(const FVector& FromWorld, const FVector& ToWorld, float TileSize, float Z);
+	bool AlignSecondModuleToFirst(AFloorGeneratorBase* ModuleA, AFloorGeneratorBase* ModuleB, FExteriorDoor& OutDoorA, FExteriorDoor& OutDoorB, int32& OutDoorBIndex);
+	void BuildTiledCorridor(const FVector& FromWorld, const FVector& ToWorld, const FVector& GridOrigin, float TileSize, float Z);
+	void BuildStraightCorridor(const FVector& FromWorld, const FVector& ToWorld, float TileSize, float Z);
+	void BuildCorridor(const FExteriorDoor& Door, int32 NumTiles, float TileSize, float Z);
+	bool BuildCorridorFromDoorOnBounds(AFloorGeneratorBase* Module, const FExteriorDoor& Door, int32 NumTiles, float TileSize, float Z, FVector& OutForward, FVector& OutLastTileWorld);
 
 private:
 

@@ -665,18 +665,19 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
         FDungeonWallSegment& Seg = WallSegments[SegIndex];
         if (!Seg.WallActor.IsValid()) continue;
 
-        const FTransform T = Seg.WallActor->GetActorTransform();
+        const FTransform WallTransform = Seg.WallActor->GetActorTransform();
         DestroySegmentAndOpposite(SegIndex);
 
 		//Record the door so DungeonManager can use it
-		FExteriorDoor DoorInfo;
-		DoorInfo.Location = T.GetLocation();
-		DoorInfo.Rotation = T.GetRotation().Rotator();
-		ExteriorDoors.Add(DoorInfo);
+		// FExteriorDoor DoorInfo;
+		// DoorInfo.Location = T.GetLocation();
+		// DoorInfo.Rotation = T.GetRotation().Rotator();
+		// ExteriorDoors.Add(DoorInfo);
+		AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
 
         if (DoorMesh)
         {
-            AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(T.GetLocation(), T.GetRotation().Rotator());
+            AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
             if (DoorActor)
             {
 				DoorActor->SetMobility(EComponentMobility::Movable);
@@ -686,7 +687,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
                 {
                     DoorComp->SetStaticMesh(DoorMesh);
 
-					FVector DoorScale = T.GetScale3D();
+					FVector DoorScale = WallTransform.GetScale3D();
 					//Stretch the door mesh to cover all segments
 					DoorScale.X *= DoorSegments;
 
