@@ -48,7 +48,14 @@ public:
 
 	//Max recursion depth
 	UPROPERTY(EditAnywhere, Category = "BSP")
-	int32 MaxDepth = 5;
+	int32 MaxDepth = 3;
+
+	//How many doors each room should have
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	int32 DoorsPerRoomMin = 1;
+	
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	int32 DoorsPerRoomMax = 2;
 
 protected:
 	// Called when the game starts or when spawned
@@ -110,10 +117,6 @@ protected:
 	//How many doors to carve out
 	UPROPERTY(EditAnywhere, Category = "Doors")
 	int32 DefaultDoorCount = 2;
-
-	//How many doors each room should have
-	UPROPERTY(EditAnywhere, Category = "Doors")
-	int32 DoorsPerRoom = 2;
 
 	//Mesh for the Doors
 	UPROPERTY(EditAnywhere, Category = "Doors")

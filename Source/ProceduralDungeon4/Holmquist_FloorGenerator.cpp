@@ -63,7 +63,7 @@ void AHolmquist_FloorGenerator::GenerateRoomLayout()
 	}
 	else
 	{
-		//Non-deterministic
+		//Non-deterministic RNG
 		Rng.GenerateNewSeed();
 	}
 
@@ -181,7 +181,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 				continue;
 			}
 
-			// Helper lambda to ask "is there floor at (NX, NY)?"
+			//Helper lambda to ask "is there floor at (NX, NY)?"
 			auto HasFloorAt = [&](int32 NX, int32 NY) -> bool
 			{
 				if (NX < 0 || NX >= MapWidth || NY < 0 || NY >= MapHeight)
@@ -416,8 +416,22 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 
 				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
 				{
-					DoorComp->SetStaticMesh(DoorMesh);
-					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
+					DoorComp->SetStaticMesh(DoorMesh);const float BaseSize = 100.f;
+
+					//Match door orientation to wall direction
+					FRotator DoorRot = WallTransform.GetRotation().Rotator();
+					if (Seg.Direction == 0 || Seg.Direction == 1)
+					{
+						DoorRot.Yaw += 90.f;
+					}
+
+					DoorActor->SetActorRotation(DoorRot);
+
+					const float ScaleX = DoorWidth  / BaseSize;
+					const float ScaleY = DoorDepth  / BaseSize;
+					const float ScaleZ = DoorHeight / BaseSize;
+
+					DoorActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
 
 					//Record the Door's info to ExteriorDoors array
 					FExteriorDoor Door;
@@ -433,3 +447,13 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 		}
 	}
 }
+
+//Do a dice-roll style walk where a NWSE direction is chosen by rand 1-4
+//Decide (through randomness or testing) how many generations to go
+//Walk the dice roll steps in the direction chosen, placing a tile for each step
+//Choose a direction again, excluding backwards
+//Dice roll and walk
+//Continue for each generation
+//After generations is complete, choose a random tile amongst all tiles created
+//Perform this process again
+//Repeat this process until a given number of tiles have been laid down

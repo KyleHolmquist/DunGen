@@ -75,7 +75,7 @@ void AWalk_FloorGenerator::InitializeMap()
 	}
 	else
 	{
-		//Non-deterministic
+		//Non-deterministic RNG
 		Rng.GenerateNewSeed();
 	}
 }

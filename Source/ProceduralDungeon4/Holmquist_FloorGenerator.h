@@ -17,6 +17,12 @@ public:
 	// Sets default values for this actor's properties
 	AHolmquist_FloorGenerator();
 
+	
+
+	//Target number of floor tiles to carve
+	UPROPERTY(EditAnywhere, Category = "Room Gen")
+	int NumTiles = 50;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -33,10 +39,6 @@ protected:
 	
 	// UPROPERTY(EditAnywhere, Category = "Room Gen")
 	// int32 GridHeight = 20;
-
-	//Target number of floor tiles to carve
-	UPROPERTY(EditAnywhere, Category = "Room Gen")
-	int NumTiles = 50;
 
 	// //Size of each tile in world units
 	// UPROPERTY(EditAnywhere, Category = "Room Gen")
@@ -73,6 +75,15 @@ protected:
 	//How many doors to carve out
 	UPROPERTY(EditAnywhere, Category = "Doors")
 	int32 DefaultDoorCount = 3;
+
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	float DoorWidth = 200.f;
+
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	float DoorHeight = 240.f;
+
+	UPROPERTY(EditAnywhere, Category = "Doors")
+	float DoorDepth = 40.f;
 
 	//Mesh for the Doors
 	UPROPERTY(EditAnywhere, Category = "Doors")

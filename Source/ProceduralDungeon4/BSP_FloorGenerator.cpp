@@ -609,7 +609,8 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
         auto& Candidates = InteriorWallsPerRoom[RoomIndex];
         if (Candidates.Num() == 0) continue;
 
-        const int32 NumDoorsForRoom = FMath::Min(DoorsPerRoom, Candidates.Num());
+		const int32 DoorsThisRoom = FMath::RandRange(DoorsPerRoomMin, DoorsPerRoomMax);
+        const int32 NumDoorsForRoom = FMath::Min(DoorsThisRoom, Candidates.Num());
 
         for (int32 d = 0; d < NumDoorsForRoom; ++d)
         {

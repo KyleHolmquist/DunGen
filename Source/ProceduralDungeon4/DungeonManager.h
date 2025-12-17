@@ -33,6 +33,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Dungeon")
 	int32 MapHeight = 30;
 
+	//Holmquist Size
+	UPROPERTY(EditAnywhere, Category = "Dungeon");
+	int32 HolmquistTiles = 80;
+
 	//Desired doors
 	UPROPERTY(EditAnywhere, Category="Dungeon")
 	int32 FirstModuleDoors = 2;

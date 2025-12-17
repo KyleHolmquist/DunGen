@@ -45,7 +45,7 @@ void ADungeonManager::BeginPlay()
 	if (ABSP_FloorGenerator* BSP = Cast<ABSP_FloorGenerator>(FirstModule))
 	{
 		BSP->MinLeafSize = 8;
-		BSP->MaxDepth = 5;
+		BSP->MaxDepth = 8;
 	}
 	if (ACA_FloorGenerator* CA = Cast<ACA_FloorGenerator>(FirstModule))
 	{
@@ -88,6 +88,10 @@ void ADungeonManager::BeginPlay()
 		CA->SimulationSteps = 5;
 		CA->BirthLimit = 4;
 		CA->DeathLimit = 3;
+	}
+	if (AHolmquist_FloorGenerator* Holmquist = Cast<AHolmquist_FloorGenerator>(SecondModule))
+	{
+		Holmquist-> NumTiles = HolmquistTiles;
 	}
 
 	//Start async wait until both modules finish initializing
