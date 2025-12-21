@@ -5,6 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "PickupInterface.h"
+#include "HitInterface.h"
+#include "CharacterTypes.h"
+#include "Weapon.h"
 #include "Airsto.generated.h"
 
 class USpringArmComponent;
@@ -12,9 +16,10 @@ class UCameraComponent;
 class UAnimMontage;
 class UInputMappingContext;
 class UInputAction;
+//class UAttributeComponent;
 
 UCLASS()
-class PROCEDURALDUNGEON4_API AAirsto : public ACharacter
+class PROCEDURALDUNGEON4_API AAirsto : public ACharacter, public IHitInterface, public IPickupInterface
 {
 	GENERATED_BODY()
 
@@ -31,19 +36,80 @@ protected:
 	void Move(const FInputActionValue& Value);
 	void Roll(const FInputActionValue& Value);
 	void Attack(const FInputActionValue& Value);
+	void Equip(const FInputActionValue& Value);
+
+    void GetWeaponType(AWeapon *OverlappingWeapon);
+
+    bool HasDodgeStamina();
+    bool HasAttackStamina();
 
 	// -- Animation Callbacks--
 	void PlayMontageSection(UAnimMontage* Montage, const FName& SectionName);
 	void PlayRollMontage();
 	void PlayAttackMontage();
+	void PlayEquipMontage(const FName& SectionName);
+
+	
+	// -- Combat Helpers
+
+	UFUNCTION(BlueprintCallable)
+	void SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled);
+	UFUNCTION(BlueprintCallable)
+	void AttackEnd();
+	UFUNCTION(BlueprintCallable)
+	void DodgeEnd();
+	UFUNCTION(BlueprintCallable)
+	void BlockEnd();
+	UFUNCTION(BlueprintCallable)
+	void DisableMeshCollision();
+	UFUNCTION(BlueprintCallable)
+	void EnableMeshCollision();
+	
+	void HandleDamage(float DamageAmount);
+	void Die_Implementation();
+
+	bool CanAttack();
+	bool CanBlock();
+	bool CanDisarm();
+	bool CanArm();
+	
+
+	UFUNCTION(BlueprintCallable)
+	void Disarm();
+	UFUNCTION(BlueprintCallable)
+	void Arm();
+	UFUNCTION(BlueprintCallable)
+	void AttachWeaponToSpine();
+	UFUNCTION(BlueprintCallable)
+	void AttachWeaponToHand();
+	UFUNCTION(BlueprintCallable)
+	void FinishEquipping();
+	UFUNCTION(BlueprintCallable)
+	void HitReactEnd();
+
+	
+	UPROPERTY(VisibleAnywhere, Category = "Weapon")
+	AWeapon* EquippedWeapon;
+
+	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	// UAttributeComponent* Attributes;
 
 private:
+
+	// -- Enum States -- 
+	ECharacterState CharacterState = ECharacterState::ECS_Unequipped;
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	EActionState ActionState = EActionState::EAS_Unoccupied;
+	EWeaponType WeaponType;
 
 	// -- Character Components --
 	UPROPERTY(VisibleAnywhere)
 	USpringArmComponent* SpringArm;
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* ViewCamera;
+
+	UPROPERTY(VisibleInstanceOnly)
+	AItem* OverlappingItem;
 
 	// -- Input --
 	UPROPERTY(EditAnywhere, Category="Input")
@@ -60,6 +126,8 @@ private:
 	// -- Combat --
 	UPROPERTY(EditAnywhere, Category="Input | Combat")
 	UInputAction* AttackAction;
+	UPROPERTY(EditAnywhere, Category="Input | Combat")
+	UInputAction* EquipAction;
 
 
 	// -- Animation Montages --
@@ -67,6 +135,8 @@ private:
     UAnimMontage *RollMontage;
     UPROPERTY(EditDefaultsOnly, Category = "Animation Montages");
     UAnimMontage *AttackMontage;
+    UPROPERTY(EditDefaultsOnly, Category = "Animation Montages");
+    UAnimMontage *EquipMontage;
 
 
 public:	

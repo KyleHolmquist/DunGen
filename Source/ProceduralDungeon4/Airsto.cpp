@@ -12,6 +12,9 @@
 #include "Components/CapsuleComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Weapon.h"
+#include "Components/BoxComponent.h"
+//#include "Components/AttributeComponent.h"
 
 // Sets default values
 AAirsto::AAirsto()
@@ -101,6 +104,7 @@ void AAirsto::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAirsto::Look);
 		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Triggered, this, &AAirsto::Roll);
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AAirsto::Attack);
+		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &AAirsto::Equip);
 	}
 	else
 	{
@@ -143,8 +147,73 @@ void AAirsto::Roll(const FInputActionValue& Value)
 void AAirsto::Attack(const FInputActionValue& Value)
 {
 	bool AttackBool = Value.Get<bool>();
-	if (AttackBool) UE_LOG(LogTemp, Warning, TEXT("Attack triggered value"));
 	PlayAttackMontage();
+}
+
+void AAirsto::Arm()
+{
+    PlayEquipMontage(FName("Equip"));
+    ActionState = EActionState::EAS_EquippingWeapon;
+    WeaponType = EquippedWeapon->GetWeaponType();
+    switch (WeaponType)
+    {
+		case (EWeaponType::EWT_OneHanded):
+		{
+			CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
+			break;
+		}
+		case (EWeaponType::EWT_TwoHanded):
+		{
+			CharacterState = ECharacterState::ECS_EquippedTwoHandedWeapon;
+			break;
+		}
+		default:
+			break;
+    }
+}
+
+void AAirsto::Disarm()
+{
+	PlayEquipMontage(FName("Unequip"));
+	CharacterState = ECharacterState::ECS_Unequipped;
+	ActionState = EActionState::EAS_EquippingWeapon;
+}
+
+void AAirsto::Equip(const FInputActionValue& Value)
+{
+	AWeapon* OverlappingWeapon = Cast<AWeapon>(OverlappingItem);
+	if (OverlappingWeapon)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("overlapped weapon"));
+		const bool bEquip = Value.Get<bool>();
+		if (bEquip)
+		{
+			if (EquippedWeapon)
+			{
+				EquippedWeapon->Destroy();
+			}
+            GetWeaponType(OverlappingWeapon);
+		}
+    }
+	else 
+	{
+		if (CanDisarm())
+		{
+			const bool bEquip = Value.Get<bool>();
+			if (bEquip)
+			{
+				Disarm();
+			}
+		}
+		else if (CanArm())
+		{
+			const bool bEquip = Value.Get<bool>();
+			if (bEquip)
+			{
+                Arm();
+            }
+		}
+	}
 }
 
 void AAirsto::PlayMontageSection(UAnimMontage* Montage, const FName& SectionName)
@@ -165,4 +234,136 @@ void AAirsto::PlayRollMontage()
 void AAirsto::PlayAttackMontage()
 {
 	PlayMontageSection(AttackMontage, FName("Attack_Sword"));
+}
+
+void AAirsto::PlayEquipMontage(const FName& SectionName)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && EquipMontage)
+	{
+		AnimInstance->Montage_Play(EquipMontage);
+		AnimInstance->Montage_JumpToSection(SectionName, EquipMontage);
+	}
+	FinishEquipping();
+}
+
+bool AAirsto::HasDodgeStamina()
+{
+    //return Attributes && Attributes->GetStamina() > Attributes->GetDodgeCost();
+	return true;
+}
+bool AAirsto::HasAttackStamina()
+{
+    //return Attributes && Attributes->GetStamina() > Attributes->GetAttackCost();
+	return true;
+}
+bool AAirsto::CanAttack()
+{
+	return ActionState == EActionState::EAS_Unoccupied &&
+		CharacterState != ECharacterState::ECS_Unequipped;
+}
+
+bool AAirsto::CanDisarm()
+{
+	return ActionState == EActionState::EAS_Unoccupied &&
+		CharacterState != ECharacterState::ECS_Unequipped;
+}
+
+bool AAirsto::CanArm()
+{
+	return ActionState == EActionState::EAS_Unoccupied &&
+		CharacterState == ECharacterState::ECS_Unequipped &&
+		EquippedWeapon;
+}
+
+bool AAirsto::CanBlock()
+{
+	return ActionState == EActionState::EAS_Unoccupied &&
+		CharacterState != ECharacterState::ECS_Unequipped &&
+		EquippedWeapon;
+}
+
+void AAirsto::AttachWeaponToSpine()
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("SpineSocket"));
+	}
+}
+
+void AAirsto::AttachWeaponToHand()
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("RightHandWeaponSocket"));
+	}
+}
+
+void AAirsto::FinishEquipping()
+{
+	if (ActionState != EActionState::EAS_Unoccupied)
+	{
+		ActionState = EActionState::EAS_Unoccupied;
+	}
+}
+
+void AAirsto::HitReactEnd()
+{
+	ActionState = EActionState::EAS_Unoccupied;
+}
+
+void AAirsto::SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled)
+{
+    if (EquippedWeapon && EquippedWeapon->GetWeaponBox())
+    {
+    	EquippedWeapon->GetWeaponBox()->SetCollisionEnabled(CollisionEnabled);
+    	EquippedWeapon->IgnoreActors.Empty();
+    }
+}
+
+void AAirsto::AttackEnd()
+{
+	ActionState = EActionState::EAS_Unoccupied;
+}
+
+void AAirsto::DodgeEnd()
+{
+
+	ActionState = EActionState::EAS_Unoccupied;
+}
+
+void AAirsto::BlockEnd()
+{
+
+	ActionState = EActionState::EAS_Unoccupied;
+}
+
+void AAirsto::DisableMeshCollision()
+{
+
+}
+
+void AAirsto::EnableMeshCollision()
+{
+
+}
+
+void AAirsto::GetWeaponType(AWeapon * OverlappingWeapon)
+{
+    if (OverlappingWeapon->GetWeaponType() == EWeaponType::EWT_OneHanded)
+    {
+        OverlappingWeapon->Equip(GetMesh(), FName("RightHandSocket"), this, this);
+        CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
+    }
+    else if (OverlappingWeapon->GetWeaponType() == EWeaponType::EWT_TwoHanded)
+    {
+        OverlappingWeapon->Equip(GetMesh(), FName("TwoHandSocket"), this, this);
+        CharacterState = ECharacterState::ECS_EquippedTwoHandedWeapon;
+    }
+    OverlappingWeapon->SetOwner(this);
+    OverlappingWeapon->SetInstigator(this);
+    WeaponType = OverlappingWeapon->GetWeaponType();
+    OverlappingItem = nullptr;
+    EquippedWeapon = OverlappingWeapon;
+	FinishEquipping();
 }
