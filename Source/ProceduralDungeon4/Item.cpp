@@ -7,6 +7,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "PickupInterface.h"
 #include "Kismet/GameplayStatics.h"
+#include "Airsto.h"
 
 // Sets default values
 AItem::AItem()
@@ -62,11 +63,16 @@ void AItem::Tick(float DeltaTime)
 
 void AItem::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Testing Anvil"));
 	IPickupInterface* PickupInterface = Cast<IPickupInterface>(OtherActor);
 	if (PickupInterface)
 	{
 		PickupInterface->SetOverlappingItem(this);
+	}
+
+	AAirsto* Airsto = Cast<AAirsto>(OtherActor);
+	if (Airsto)
+	{
+		Airsto->SetOverlappingItem(this);
 	}
 }
 
@@ -77,6 +83,13 @@ void AItem::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
 	{
 		PickupInterface->SetOverlappingItem(nullptr);
 	}
+
+	AAirsto* Airsto = Cast<AAirsto>(OtherActor);
+	if (Airsto)
+	{
+		Airsto->SetOverlappingItem(nullptr);
+	}
+
 }
 
 void AItem::SpawnPickupSystem()

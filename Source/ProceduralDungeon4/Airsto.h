@@ -16,6 +16,7 @@ class UCameraComponent;
 class UAnimMontage;
 class UInputMappingContext;
 class UInputAction;
+class AItem;
 //class UAttributeComponent;
 
 UCLASS()
@@ -87,6 +88,11 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void HitReactEnd();
 
+	// -- Animation Variables --
+	
+	UPROPERTY(BlueprintReadOnly)
+	TEnumAsByte<EDeathPose> DeathPose;
+
 	
 	UPROPERTY(VisibleAnywhere, Category = "Weapon")
 	AWeapon* EquippedWeapon;
@@ -97,6 +103,7 @@ protected:
 private:
 
 	// -- Enum States -- 
+	UPROPERTY(BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "true"))
 	ECharacterState CharacterState = ECharacterState::ECS_Unequipped;
 	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	EActionState ActionState = EActionState::EAS_Unoccupied;
@@ -107,9 +114,6 @@ private:
 	USpringArmComponent* SpringArm;
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* ViewCamera;
-
-	UPROPERTY(VisibleInstanceOnly)
-	AItem* OverlappingItem;
 
 	// -- Input --
 	UPROPERTY(EditAnywhere, Category="Input")
@@ -138,8 +142,16 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "Animation Montages");
     UAnimMontage *EquipMontage;
 
+	// -- Items //
+	UPROPERTY(VisibleInstanceOnly)
+	AItem* OverlappingItem;
 
-public:	
+
+public:
+	FORCEINLINE void SetOverlappingItem(AItem* Item) { OverlappingItem = Item; }
+	FORCEINLINE ECharacterState GetCharacterState() const { return CharacterState; }
+	FORCEINLINE EActionState GetActionState() const { return ActionState; }
+	FORCEINLINE TEnumAsByte<EDeathPose> GetDeathPose() const { return DeathPose; }
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 

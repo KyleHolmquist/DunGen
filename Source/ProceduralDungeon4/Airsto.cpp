@@ -12,6 +12,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Item.h"
 #include "Weapon.h"
 #include "Components/BoxComponent.h"
 //#include "Components/AttributeComponent.h"
@@ -145,9 +146,12 @@ void AAirsto::Roll(const FInputActionValue& Value)
 }
 
 void AAirsto::Attack(const FInputActionValue& Value)
-{
-	bool AttackBool = Value.Get<bool>();
-	PlayAttackMontage();
+{	
+	if (CanAttack())
+	{
+		PlayAttackMontage();
+		ActionState = EActionState::EAS_Attacking;
+	}
 }
 
 void AAirsto::Arm()
@@ -184,7 +188,8 @@ void AAirsto::Equip(const FInputActionValue& Value)
 	AWeapon* OverlappingWeapon = Cast<AWeapon>(OverlappingItem);
 	if (OverlappingWeapon)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("overlapped weapon"));
+		OverlappingWeapon->Equip(GetMesh(), FName("RightHandSocket"));
+		CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
 		const bool bEquip = Value.Get<bool>();
 		if (bEquip)
 		{
@@ -192,7 +197,7 @@ void AAirsto::Equip(const FInputActionValue& Value)
 			{
 				EquippedWeapon->Destroy();
 			}
-            GetWeaponType(OverlappingWeapon);
+            //GetWeaponType(OverlappingWeapon);
 		}
     }
 	else 
