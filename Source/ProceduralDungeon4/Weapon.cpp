@@ -13,7 +13,7 @@
 
 
 AWeapon::AWeapon()
-{
+{ 
 	WeaponBox = CreateDefaultSubobject<UBoxComponent>(TEXT("Weapon Box"));
 	WeaponBox->SetupAttachment(GetRootComponent());
 	WeaponBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -48,7 +48,11 @@ void AWeapon::Equip(USceneComponent* InParent, FName InSocketName, AActor* NewOw
 void AWeapon::Equip(USceneComponent *InParent, FName InSocketName)
 {
     FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, true);
-    ItemMesh->AttachToComponent(InParent, TransformRules, InSocketName);
+    //ItemMesh->AttachToComponent(InParent, TransformRules, InSocketName);
+	AttachMeshToSocket(InParent, InSocketName);
+    ItemState = EItemState::EIS_Equipped;
+	PlayEquipSound();
+    DisableSphereCollision();
 }
 
 void AWeapon::BoxTrace(FHitResult& BoxHit)
@@ -57,12 +61,12 @@ void AWeapon::BoxTrace(FHitResult& BoxHit)
 	const FVector End = BoxTraceEnd->GetComponentLocation();
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(this);
-	ActorsToIgnore.AddUnique(GetOwner());
+	//ActorsToIgnore.AddUnique(GetOwner());
 
-	for (AActor* Actor : IgnoreActors)
-	{
-		ActorsToIgnore.AddUnique(Actor);
-	}
+	// for (AActor* Actor : IgnoreActors)
+	// {
+	// 	ActorsToIgnore.AddUnique(Actor);
+	// }
 
 	UKismetSystemLibrary::BoxTraceSingle(
 		this,
@@ -73,14 +77,15 @@ void AWeapon::BoxTrace(FHitResult& BoxHit)
 		ETraceTypeQuery::TraceTypeQuery1,
 		false,
 		ActorsToIgnore,
-		bShowBoxDebug? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+		//bShowBoxDebug? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
+		EDrawDebugTrace::ForDuration,
 		BoxHit,
 		true,
 		FColor::Red,
 		FColor::Green,
 		5.f
 		);
-	IgnoreActors.AddUnique(BoxHit.GetActor());
+	//IgnoreActors.AddUnique(BoxHit.GetActor());
 }
 
 void AWeapon::DeactivateEmbers()
@@ -120,7 +125,7 @@ void AWeapon::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 
 void AWeapon::OnBoxOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
 {
-    if (ActorIsSameType(OtherActor)) return;
+    //if (ActorIsSameType(OtherActor)) return;
 
 	FHitResult BoxHit;
 	BoxTrace(BoxHit);

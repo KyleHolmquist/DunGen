@@ -95,7 +95,7 @@ protected:
 
 	
 	UPROPERTY(VisibleAnywhere, Category = "Weapon")
-	AWeapon* EquippedWeapon;
+	AWeapon* EquippedWeapon = nullptr;
 
 	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	// UAttributeComponent* Attributes;
@@ -103,10 +103,11 @@ protected:
 private:
 
 	// -- Enum States -- 
-	UPROPERTY(BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Movement", meta = (AllowPrivateAccess = "true"))
 	ECharacterState CharacterState = ECharacterState::ECS_Unequipped;
-	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
 	EActionState ActionState = EActionState::EAS_Unoccupied;
+	UPROPERTY(VisibleAnywhere)
 	EWeaponType WeaponType;
 
 	// -- Character Components --
