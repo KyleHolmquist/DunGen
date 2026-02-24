@@ -21,6 +21,7 @@ Saved/
 *.dll
 *.dylib
 *.app
+Content/
 
 # Ignore additional folders
 Plugins/*/Intermediate/

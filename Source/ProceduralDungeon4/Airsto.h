@@ -6,9 +6,9 @@
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "PickupInterface.h"
-#include "HitInterface.h"
 #include "CharacterTypes.h"
 #include "Weapon.h"
+#include "BaseCharacter.h"
 #include "Airsto.generated.h"
 
 class USpringArmComponent;
@@ -17,6 +17,9 @@ class UAnimMontage;
 class UInputMappingContext;
 class UInputAction;
 class AItem;
+class AWisdom;
+class ATreasure;
+
 //class UAttributeComponent;
 
 UCLASS()
