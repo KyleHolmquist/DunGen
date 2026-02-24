@@ -3,12 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
-#include "InputActionValue.h"
-#include "PickupInterface.h"
-#include "CharacterTypes.h"
-#include "Weapon.h"
 #include "BaseCharacter.h"
+#include "CharacterTypes.h"
+#include "PickupInterface.h"
 #include "Airsto.generated.h"
 
 class USpringArmComponent;
@@ -19,64 +16,83 @@ class UInputAction;
 class AItem;
 class AWisdom;
 class ATreasure;
-
-//class UAttributeComponent;
+class UDunGenOverlay;
+class UAttributeComponent;
 
 UCLASS()
-class PROCEDURALDUNGEON4_API AAirsto : public ACharacter, public IHitInterface, public IPickupInterface
+class PROCEDURALDUNGEON4_API AAirsto : public ABaseCharacter, public IPickupInterface
 {
 	GENERATED_BODY()
 
 public:
 	AAirsto();
+	virtual void Tick(float DeltaTime) override;
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const &DamageEvent, class AController *EventInstigator, AActor *DamageCauser) override;
+    virtual void GetHit_Implementation(const FVector &ImpactPoint, AActor *Hitter) override;
+	virtual void SetOverlappingItem(AItem* Item) override;
+	virtual void AddWisdom(AWisdom* Wisdom) override;
+	virtual void AddGold(ATreasure* Treasure) override;
 
 protected:
 	virtual void BeginPlay() override;
 
-	void InitializeEnhancedInput();
+    UPROPERTY(EditAnywhere, Category = Input)
+    UInputMappingContext* AirstoMappingContext;
 
-	// -- Input Callbacks --
-	void Look(const FInputActionValue& Value);
+	/** Input Actions */
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* MovementAction;
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* LookAction;
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* JumpAction;
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* EquipAction;
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* AttackAction;
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* DodgeAction;
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* InteractAction;
+
+	
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* LookXAction;
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* LookYAction;
+
+	/**
+	 * Callbacks for Input */
 	void Move(const FInputActionValue& Value);
-	void Roll(const FInputActionValue& Value);
-	void Attack(const FInputActionValue& Value);
-	void Equip(const FInputActionValue& Value);
-
+	void Look(const FInputActionValue& Value);
+    void Equip(const FInputActionValue &Value);
     void GetWeaponType(AWeapon *OverlappingWeapon);
+    void Arm(const FInputActionValue &Value);
+    void Dodge(const FInputActionValue &Value);
+    void Interact(const FInputActionValue &Value);
 
     bool HasDodgeStamina();
     bool HasAttackStamina();
 
-	// -- Animation Callbacks--
-	void PlayMontageSection(UAnimMontage* Montage, const FName& SectionName);
-	void PlayRollMontage();
-	void PlayAttackMontage();
-	void PlayEquipMontage(const FName& SectionName);
+    virtual void Attack(const FInputActionValue &Value) override;
+    virtual void Jump() override;
 
 	
-	// -- Combat Helpers
+	void LookX(const FInputActionValue& Value);
+	void LookY(const FInputActionValue& Value);
 
-	UFUNCTION(BlueprintCallable)
-	void SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled);
-	UFUNCTION(BlueprintCallable)
-	void AttackEnd();
-	UFUNCTION(BlueprintCallable)
-	void DodgeEnd();
-	UFUNCTION(BlueprintCallable)
-	void BlockEnd();
-	UFUNCTION(BlueprintCallable)
-	void DisableMeshCollision();
-	UFUNCTION(BlueprintCallable)
-	void EnableMeshCollision();
-	
-	void HandleDamage(float DamageAmount);
-	void Die_Implementation();
-
-	bool CanAttack();
-	bool CanBlock();
+    /* Combat */
+	virtual void AttackEnd() override;
+	virtual void DodgeEnd() override;
+	virtual void DisableMeshCollision() override;
+	virtual void EnableMeshCollision() override;
+	virtual bool CanAttack() override;
 	bool CanDisarm();
 	bool CanArm();
-	
+	void PlayEquipMontage(const FName& SectionName);
+	virtual void HandleDamage(float DamageAmount) override;
+	virtual void Die_Implementation() override;
 
 	UFUNCTION(BlueprintCallable)
 	void Disarm();
@@ -91,72 +107,45 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void HitReactEnd();
 
-	// -- Animation Variables --
-	
-	UPROPERTY(BlueprintReadOnly)
-	TEnumAsByte<EDeathPose> DeathPose;
+	void ShowInteractButton();
+	void HideInteractButton();
 
-	
-	UPROPERTY(VisibleAnywhere, Category = "Weapon")
-	AWeapon* EquippedWeapon = nullptr;
+	EWeaponType WeaponType;
 
-	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	// UAttributeComponent* Attributes;
+	bool IsOccupied();
+	bool IsUnoccupied();
 
 private:
 
-	// -- Enum States -- 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Movement", meta = (AllowPrivateAccess = "true"))
-	ECharacterState CharacterState = ECharacterState::ECS_Unequipped;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
-	EActionState ActionState = EActionState::EAS_Unoccupied;
-	UPROPERTY(VisibleAnywhere)
-	EWeaponType WeaponType;
+    void InitializeEnhancedInput();
+    void InitializeDunGenOverlay();
+    void SetHUDHealth();
 
-	// -- Character Components --
+	ECharacterState CharacterState = ECharacterState::ECS_Unequipped;
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	EActionState ActionState = EActionState::EAS_Unoccupied;
+
+	/* Character Components */
+
 	UPROPERTY(VisibleAnywhere)
 	USpringArmComponent* SpringArm;
+
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* ViewCamera;
 
-	// -- Input --
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputMappingContext* AirstoContext;
-
-	// -- Movement -- 
-	UPROPERTY(EditAnywhere, Category="Input | Movement")
-	UInputAction* LookAction;
-	UPROPERTY(EditAnywhere, Category="Input | Movement")
-	UInputAction* MoveAction;
-	UPROPERTY(EditAnywhere, Category="Input | Movement")
-	UInputAction* RollAction;
-
-	// -- Combat --
-	UPROPERTY(EditAnywhere, Category="Input | Combat")
-	UInputAction* AttackAction;
-	UPROPERTY(EditAnywhere, Category="Input | Combat")
-	UInputAction* EquipAction;
-
-
-	// -- Animation Montages --
-    UPROPERTY(EditDefaultsOnly, Category = "Animation Montages");
-    UAnimMontage *RollMontage;
-    UPROPERTY(EditDefaultsOnly, Category = "Animation Montages");
-    UAnimMontage *AttackMontage;
-    UPROPERTY(EditDefaultsOnly, Category = "Animation Montages");
-    UAnimMontage *EquipMontage;
-
-	// -- Items //
 	UPROPERTY(VisibleInstanceOnly)
 	AItem* OverlappingItem;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Montages");
+	UAnimMontage* EquipMontage;
+
+	UPROPERTY()
+	UDunGenOverlay* DunGenOverlay;
+
 
 public:
-	FORCEINLINE void SetOverlappingItem(AItem* Item) { OverlappingItem = Item; }
 	FORCEINLINE ECharacterState GetCharacterState() const { return CharacterState; }
 	FORCEINLINE EActionState GetActionState() const { return ActionState; }
-	FORCEINLINE TEnumAsByte<EDeathPose> GetDeathPose() const { return DeathPose; }
-	virtual void Tick(float DeltaTime) override;
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	FORCEINLINE UDunGenOverlay* GetDunGenOverlay() { return DunGenOverlay; }
 
 };

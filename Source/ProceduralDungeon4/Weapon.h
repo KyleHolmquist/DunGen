@@ -4,21 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Item.h"
+#include "WeaponTypes.h"
 #include "Weapon.generated.h"
 
 class USoundBase;
 class UBoxComponent;
 class USceneComponent;
-
-
-UENUM(BlueprintType)
-enum class EWeaponType : uint8
-{
-	EWT_Sword UMETA(DisplayName = "Sword"),
-	EWT_Axe UMETA(DisplayName = "Axe"),
-	EWT_OneHanded UMETA(DisplayName = "OneHanded"),
-	EWT_TwoHanded UMETA(DisplayName = "TwoHanded")
-};
 
 UCLASS()
 class PROCEDURALDUNGEON4_API AWeapon : public AItem

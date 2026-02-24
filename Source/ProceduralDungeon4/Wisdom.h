@@ -21,7 +21,7 @@ protected:
 
 private:
 	UPROPERTY(EditAnywhere, Category = "Wisdom Properties")
-	int32 Wisdom;
+	int32 WisdomAmount;
 
 	double DesiredZ;
 
@@ -30,7 +30,7 @@ private:
 	
 
 public:
-	FORCEINLINE int32 GetWisdom() const { return Wisdom; }
-	FORCEINLINE void SetWisdom(int32 WisdomAmount) { Wisdom = WisdomAmount; }
+	FORCEINLINE int32 GetWisdom() const { return WisdomAmount; }
+	FORCEINLINE void SetWisdom(int32 WisdomQuantity) { WisdomAmount = WisdomQuantity; }
 	
 };

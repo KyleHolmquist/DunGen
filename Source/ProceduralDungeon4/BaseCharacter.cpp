@@ -51,13 +51,17 @@ void ABaseCharacter::GetHit_Implementation(const FVector& ImpactPoint, AActor* H
     SpawnHitParticles(ImpactPoint);
 }
 
-void ABaseCharacter::Attack(const FInputActionValue& Value)
+void ABaseCharacter::Attack()
 {
-    
     if (CombatTarget&& CombatTarget->ActorHasTag((FName("Dead"))))
     {
         CombatTarget = nullptr;
     }
+}
+
+void ABaseCharacter::Attack(const FInputActionValue& Value)
+{
+    
 }
 
 void ABaseCharacter::PlayMontageSection(UAnimMontage* Montage, const FName& SectionName)
@@ -79,36 +83,20 @@ int32 ABaseCharacter::PlayRandomMontageSection(UAnimMontage* Montage, const TArr
     return Selection;
 }
 
-int32 ABaseCharacter::PlayAttackMontage()
+void ABaseCharacter::PlayAttackMontage()
 {
-    // switch (WeaponType)
-    // {
-    //     case EWeaponType::EWT_OneHanded:
-    //     {
-    //         return PlayRandomMontageSection(AttackOneHandedMontage, AttackMontageSections);
-    //     }
-    //     case EWeaponType::EWT_TwoHanded:
-    //     {
-    //         return PlayRandomMontageSection(AttackTwoHandedMontage, AttackMontageSections);
-    //     }
-    //     default:
-    //     {
-    //         return PlayRandomMontageSection(AttackOneHandedMontage, AttackMontageSections);
-    //     }
-    // }
-    return 0;
+    PlayMontageSection(AttackMontage, FName("Default"));
 }
 
 int32 ABaseCharacter::PlayDeathMontage()
 {   
-    // const int32 Selection = PlayRandomMontageSection(DeathMontage, DeathMontageSections);
-    // TEnumAsByte<EDeathPose> Pose(Selection);
-    // if (Pose < EDeathPose::EDP_MAX)
-    // {
-    //     DeathPose = Pose;
-    // }
-    //return Selection;
-    return 0;
+    const int32 Selection = PlayRandomMontageSection(DeathMontage, DeathMontageSections);
+    TEnumAsByte<EDeathPose> Pose(Selection);
+    if (Pose < EDeathPose::EDP_MAX)
+    {
+        DeathPose = Pose;
+    }
+    return Selection;
 }
 
 void ABaseCharacter::PlayDodgeMontage()
@@ -121,14 +109,7 @@ void ABaseCharacter::StopAttackMontage()
     UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
     if (AnimInstance)
     {
-        // if (AttackOneHandedMontage)
-        // {
-        //     AnimInstance->Montage_Stop(0.25f, AttackOneHandedMontage);
-        // }
-        // if (AttackTwoHandedMontage)
-        // {
-        //     AnimInstance->Montage_Stop(0.25f, AttackTwoHandedMontage);
-        // }
+        AnimInstance->Montage_Stop(0.25f, AttackMontage);
     }
 }
 

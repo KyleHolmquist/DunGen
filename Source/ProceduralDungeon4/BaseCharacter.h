@@ -6,16 +6,16 @@
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "HitInterface.h"
+#include "WeaponTypes.h"
 #include "CharacterTypes.h"
 #include "BaseCharacter.generated.h"
 
 class AWeapon;
 class UAttributeComponent;
 class UAnimMontage;
-class UAbilitySystem;
 
 UCLASS()
-class PROCEDURALDUNGEON4_API ABaseCharacter : public ACharacter
+class PROCEDURALDUNGEON4_API ABaseCharacter : public ACharacter, public IHitInterface
 {
 	GENERATED_BODY()
 
@@ -31,13 +31,14 @@ protected:
 
 	virtual bool CanAttack();
 	bool IsAlive();
+	virtual void Attack();
 	virtual void Attack(const FInputActionValue& Value);
     void DirectionalHitReact(const FVector &ImpactPoint);
 	void PlayHitSound(const FVector& ImpactPoint);
 
 	/** Montage */
 	void PlayHitReactMontage(const FName& SectionName);
-	virtual int32 PlayAttackMontage();
+	virtual void PlayAttackMontage();
 	virtual int32 PlayDeathMontage();
 	virtual void PlayDodgeMontage();
 	void StopAttackMontage();
@@ -97,9 +98,6 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	USoundBase* HitSound;
-
-	UPROPERTY(EditAnywhere, Category = Combat)
-	USoundBase* BlockSound;
 	
 	UPROPERTY(EditAnywhere, Category = Combat)
 	UParticleSystem* HitParticles;
@@ -116,6 +114,12 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "Combat");
     UAnimMontage *DodgeMontage;
+
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	TArray<FName> AttackMontageSections;
+
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	TArray<FName> DeathMontageSections;
 
 public:
 	FORCEINLINE TEnumAsByte<EDeathPose> GetDeathPose() const { return DeathPose; }

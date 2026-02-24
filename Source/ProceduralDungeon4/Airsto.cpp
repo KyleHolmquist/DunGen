@@ -3,35 +3,38 @@
 
 #include "Airsto.h"
 
-#include "Components/InputComponent.h"
-#include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "GameFramework/Controller.h"
+#include "EnhancedInputComponent.h"
+#include "Components/InputComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
-#include "Components/CapsuleComponent.h"
-#include "Animation/AnimMontage.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "AttributeComponent.h"
 #include "Item.h"
 #include "Weapon.h"
-#include "Components/BoxComponent.h"
-//#include "Components/AttributeComponent.h"
+#include "Animation/AnimMontage.h"
+#include "DunGenHUD.h"
+#include "DunGenOverlay.h"
+#include "Wisdom.h"
+#include "Treasure.h"
 
-// Sets default values
 AAirsto::AAirsto()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
-	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
+
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 400.f, 0.f);
 
 	GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 	GetMesh()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Overlap);
 	GetMesh()->SetGenerateOverlapEvents(true);
-
-	AutoPossessPlayer = EAutoReceiveInput::Player0;
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(GetRootComponent());
@@ -40,87 +43,83 @@ AAirsto::AAirsto()
 	ViewCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("ViewCamera"));
 	ViewCamera->SetupAttachment(SpringArm);
 
-	SpringArm->bUsePawnControlRotation = true;
-	ViewCamera->bUsePawnControlRotation = false;
-
-	// Typical 3rd-person character settings:
-	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw   = false;
-	bUseControllerRotationRoll  = false;
-
-	GetCharacterMovement()->bOrientRotationToMovement = true;
-
 }
 
-// Called when the game starts or when spawned
-void AAirsto::BeginPlay()
-{
-	Super::BeginPlay();
-
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(AirstoContext, 0);
-		}	
-	}
-	InitializeEnhancedInput();
-}
-
-void AAirsto::InitializeEnhancedInput()
-{
-	APlayerController *PlayerController = Cast<APlayerController>(Controller);
-
-    if (!PlayerController) return;
-
-	UEnhancedInputLocalPlayerSubsystem *Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
-	
-	if (Subsystem && AirstoContext)
-	{
-		Subsystem->AddMappingContext(AirstoContext, 1);
-	}
-
-	Tags.Add(FName("Player"));
-}
-
-// Called every frame
 void AAirsto::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (Attributes && DunGenOverlay)
+	{
+		Attributes->RegenStamina(DeltaTime);
+		DunGenOverlay->SetStaminaBarPercent(Attributes->GetStaminaPercent());
+	}
 }
 
-// Called to bind functionality to input
-void AAirsto::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void AAirsto::SetOverlappingItem(AItem* Item)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
-	{
-    	UE_LOG(LogTemp, Warning, TEXT("EnhancedInputComponent OK"));
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAirsto::Move);
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAirsto::Look);
-		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Triggered, this, &AAirsto::Roll);
-		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AAirsto::Attack);
-		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &AAirsto::Equip);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("PlayerInputComponent is NOT an EnhancedInputComponent"));
-
-	}
-
+	OverlappingItem = Item;
 }
 
-void AAirsto::Look(const FInputActionValue& Value)
-{
 
-	const FVector2D LookAxisVector = Value.Get<FVector2D>();
-	if (GetController())
+void AAirsto::AddWisdom(AWisdom* Wisdom)
+{
+	if (Attributes && DunGenOverlay)
 	{
-		AddControllerYawInput(LookAxisVector.Y);
-		AddControllerPitchInput(LookAxisVector.X);
+		Attributes->AddWisdom(Wisdom->GetWisdom());
+		DunGenOverlay->SetWisdom(Attributes->GetWisdom());
 	}
+}
+
+void AAirsto::AddGold(ATreasure* Treasure)
+{
+	if (Attributes && DunGenOverlay)
+	{
+		Attributes->AddGold(Treasure->GetGold());
+		DunGenOverlay->SetGold(Attributes->GetGold());
+	}
+}
+
+void AAirsto::BeginPlay()
+{
+	Super::BeginPlay();
+
+    InitializeEnhancedInput();
+    Tags.Add(FName("EngageableTarget"));
+    InitializeDunGenOverlay();
+	
+}
+
+void AAirsto::InitializeEnhancedInput()
+{
+    if (APlayerController *PlayerController = Cast<APlayerController>(Controller))
+    {
+        if (UEnhancedInputLocalPlayerSubsystem *Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+        {
+            Subsystem->AddMappingContext(AirstoMappingContext, 0);
+        }
+        Tags.Add(FName("Player"));
+    }
+}
+void AAirsto::InitializeDunGenOverlay()
+{
+    APlayerController *PlayerController = Cast<APlayerController>(GetController());
+    if (PlayerController)
+    {
+        ADunGenHUD *DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
+        if (DunGenHUD)
+        {
+            DunGenOverlay = DunGenHUD->GetDunGenOverlay();
+            if (DunGenOverlay && Attributes)
+            {
+				DunGenOverlay->HideInteractButton();
+                DunGenOverlay->SetHealthBarPercent(Attributes->GetHealthPercent());
+                DunGenOverlay->SetStaminaBarPercent(1.f);
+                DunGenOverlay->SetGold(0);
+                DunGenOverlay->SetWisdom(0);
+            }
+        }
+    }
 }
 
 void AAirsto::Move(const FInputActionValue& Value)
@@ -128,6 +127,9 @@ void AAirsto::Move(const FInputActionValue& Value)
 	if (ActionState != EActionState::EAS_Unoccupied) return;
 
 	const FVector2D MovementVector = Value.Get<FVector2D>();
+	
+	// const FVector Forward = GetActorForwardVector();
+	// AddMovementInput(Forward, MovementVector.Y);
 
 	const FRotator ControlRotation = Controller->GetControlRotation();
 	const FRotator YawRotation(0.f, ControlRotation.Yaw, 0.f);
@@ -137,17 +139,123 @@ void AAirsto::Move(const FInputActionValue& Value)
 
 	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 	AddMovementInput(RightDirection, MovementVector.X);
+
+	// const FVector Right = GetActorRightVector();
+	// AddMovementInput(Right, MovementVector.X);
+
+}
+
+void AAirsto::Look(const FInputActionValue& Value)
+{
+	const FVector2D LookAxisVector = Value.Get<FVector2D>();
+	if (GetController())
+	{
+		AddControllerYawInput(LookAxisVector.Y);
+		AddControllerPitchInput(LookAxisVector.X);
+	}
+}
+
+void AAirsto::LookX(const FInputActionValue& Value)
+{
+	const float LookX = Value.Get<float>();
+	if (GetController())
+	{
+		AddControllerYawInput(LookX);
+	}
+}
+
+void AAirsto::LookY(const FInputActionValue& Value)
+{
+	const float LookY = Value.Get<float>();
+	if (GetController())
+	{
+		AddControllerPitchInput(LookY);
+	}
+}
+
+void AAirsto::Jump()
+{
+	if (IsUnoccupied())
+	{
+		Super::Jump();
+	}
+	
+}
+
+bool AAirsto::IsOccupied()
+{
+	return ActionState != EActionState::EAS_Unoccupied;
+}
+
+bool AAirsto::IsUnoccupied()
+{
+	return ActionState == EActionState::EAS_Unoccupied;
+}
+
+void AAirsto::Equip(const FInputActionValue& Value)
+{
+	AWeapon* OverlappingWeapon = Cast<AWeapon>(OverlappingItem);
+	if (OverlappingWeapon)
+	{
+		const bool bEquip = Value.Get<bool>();
+		if (bEquip)
+		{
+			if (EquippedWeapon)
+			{
+				EquippedWeapon->Destroy();
+			}
+            GetWeaponType(OverlappingWeapon);
+		}
+    }
+	else 
+	{
+		if (CanDisarm())
+		{
+			const bool bEquip = Value.Get<bool>();
+			if (bEquip)
+			{
+				Disarm();
+			}
+		}
+		else if (CanArm())
+		{
+			const bool bEquip = Value.Get<bool>();
+			if (bEquip)
+			{
+                Arm();
+            }
+		}
+	}
+}
+
+void AAirsto::GetWeaponType(AWeapon * OverlappingWeapon)
+{
+
+	if (OverlappingWeapon)
+	{
+		OverlappingWeapon->Equip(GetMesh(), FName("WeaponSocket"), this, this);
+		CharacterState = ECharacterState::ECS_EquippedWeapon;
+	}
+
+    OverlappingWeapon->SetOwner(this);
+    OverlappingWeapon->SetInstigator(this);
+    WeaponType = OverlappingWeapon->GetWeaponType();
+    OverlappingItem = nullptr;
+    EquippedWeapon = OverlappingWeapon;
+	FinishEquipping();
+}
+
+void AAirsto::Arm()
+{
+    PlayEquipMontage(FName("Equip"));
+    ActionState = EActionState::EAS_EquippingWeapon;
+    WeaponType = EquippedWeapon->GetWeaponType();
+	CharacterState = ECharacterState::ECS_EquippedWeapon;
 }
  
-void AAirsto::Roll(const FInputActionValue& Value)
-{
-	if (ActionState != EActionState::EAS_Unoccupied) return;
-
-	PlayRollMontage();
-}
-
 void AAirsto::Attack(const FInputActionValue& Value)
 {	
+	Super::Attack(Value);
 	if (CanAttack())
 	{
 		PlayAttackMontage();
@@ -155,124 +263,30 @@ void AAirsto::Attack(const FInputActionValue& Value)
 	}
 }
 
-void AAirsto::Equip(const FInputActionValue& Value)
+void AAirsto::Dodge(const FInputActionValue& Value)
 {
-	AWeapon* OverlappingWeapon = Cast<AWeapon>(OverlappingItem);
-
-	if (OverlappingWeapon)
+	if (IsOccupied() || !HasDodgeStamina()) return;
+    PlayDodgeMontage();
+	ActionState = EActionState::EAS_Dodging;
+	if (Attributes && DunGenOverlay)
 	{
-		OverlappingWeapon->Equip(GetMesh(), FName("RightHandSocket"));
-		CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
-		OverlappingItem = nullptr;
-		EquippedWeapon = OverlappingWeapon;
-		// const bool bEquip = Value.Get<bool>();
-		// if (bEquip)
-		// {
-		// 	if (EquippedWeapon)
-		// 	{
-		// 		EquippedWeapon->Destroy();
-		// 	}
-		//     //GetWeaponType(OverlappingWeapon);
-		// }
-	}
-	else 
-	{
-		if (CanDisarm())
-		{
-			// const bool bEquip = Value.Get<bool>();
-			// if (bEquip)
-			// {
-			// 	Disarm();
-			// }
-			Disarm();
-		}
-		else if (CanArm())
-		{
-			// const bool bEquip = Value.Get<bool>();
-			// if (bEquip)
-			// {
-            //     Arm();
-            // }
-			Arm();
-		}
+		Attributes->UseStamina(Attributes->GetDodgeCost());
+		DunGenOverlay->SetStaminaBarPercent(Attributes->GetStaminaPercent());
 	}
 }
 
-void AAirsto::Arm()
+void AAirsto::Interact(const FInputActionValue& Value)
 {
-	if (EquippedWeapon)
-	{
-		PlayEquipMontage(FName("Equip"));
-		CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
-    	ActionState = EActionState::EAS_EquippingWeapon;
-	}
-    // WeaponType = EquippedWeapon->GetWeaponType();
-    // switch (WeaponType)
-    // {
-	// 	case (EWeaponType::EWT_OneHanded):
-	// 	{
-	// 		CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
-	// 		break;
-	// 	}
-	// 	case (EWeaponType::EWT_TwoHanded):
-	// 	{
-	// 		CharacterState = ECharacterState::ECS_EquippedTwoHandedWeapon;
-	// 		break;
-	// 	}
-	// 	default:
-	// 		break;
-    // }
-}
-
-void AAirsto::Disarm()
-{
-	if (EquippedWeapon)
-	{
-		PlayEquipMontage(FName("Unequip"));
-		CharacterState = ECharacterState::ECS_Unequipped;
-		ActionState = EActionState::EAS_EquippingWeapon;
-	}
-}
-
-void AAirsto::PlayMontageSection(UAnimMontage* Montage, const FName& SectionName)
-{
-    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-    if (AnimInstance && Montage)
-    {
-        AnimInstance->Montage_Play(Montage);
-        AnimInstance->Montage_JumpToSection(SectionName, Montage);
-    }
-}
-
-void AAirsto::PlayRollMontage()
-{
-	PlayMontageSection(RollMontage, FName("Default"));
-}
-
-void AAirsto::PlayAttackMontage()
-{
-	PlayMontageSection(AttackMontage, FName("Attack_Sword"));
-}
-
-void AAirsto::PlayEquipMontage(const FName& SectionName)
-{
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (AnimInstance && EquipMontage)
-	{
-		AnimInstance->Montage_Play(EquipMontage);
-		AnimInstance->Montage_JumpToSection(SectionName, EquipMontage);
-	}
+	UE_LOG(LogTemp, Warning, TEXT("Interacting!"));
 }
 
 bool AAirsto::HasDodgeStamina()
 {
-    //return Attributes && Attributes->GetStamina() > Attributes->GetDodgeCost();
-	return true;
+    return Attributes && Attributes->GetStamina() > Attributes->GetDodgeCost();
 }
 bool AAirsto::HasAttackStamina()
 {
-    //return Attributes && Attributes->GetStamina() > Attributes->GetAttackCost();
-	return true;
+    return Attributes && Attributes->GetStamina() > Attributes->GetAttackCost();
 }
 bool AAirsto::CanAttack()
 {
@@ -283,8 +297,7 @@ bool AAirsto::CanAttack()
 bool AAirsto::CanDisarm()
 {
 	return ActionState == EActionState::EAS_Unoccupied &&
-		CharacterState != ECharacterState::ECS_Unequipped &&
-		EquippedWeapon;
+		CharacterState != ECharacterState::ECS_Unequipped;
 }
 
 bool AAirsto::CanArm()
@@ -294,11 +307,11 @@ bool AAirsto::CanArm()
 		EquippedWeapon;
 }
 
-bool AAirsto::CanBlock()
+void AAirsto::Disarm()
 {
-	return ActionState == EActionState::EAS_Unoccupied &&
-		CharacterState != ECharacterState::ECS_Unequipped &&
-		EquippedWeapon;
+	PlayEquipMontage(FName("Unequip"));
+	CharacterState = ECharacterState::ECS_Unequipped;
+	ActionState = EActionState::EAS_EquippingWeapon;
 }
 
 void AAirsto::AttachWeaponToSpine()
@@ -311,15 +324,19 @@ void AAirsto::AttachWeaponToSpine()
 
 void AAirsto::AttachWeaponToHand()
 {
+
 	if (EquippedWeapon)
 	{
-		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("RightHandSocket"));
+		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("WeaponSocket"));
 	}
 }
 
 void AAirsto::FinishEquipping()
 {
-	ActionState = EActionState::EAS_Unoccupied;
+	if (ActionState != EActionState::EAS_Unoccupied)
+	{
+		ActionState = EActionState::EAS_Unoccupied;
+	}
 }
 
 void AAirsto::HitReactEnd()
@@ -327,13 +344,38 @@ void AAirsto::HitReactEnd()
 	ActionState = EActionState::EAS_Unoccupied;
 }
 
-void AAirsto::SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled)
+void AAirsto::ShowInteractButton()
 {
-    if (EquippedWeapon && EquippedWeapon->GetWeaponBox())
-    {
-    	EquippedWeapon->GetWeaponBox()->SetCollisionEnabled(CollisionEnabled);
-    	EquippedWeapon->IgnoreActors.Empty();
-    }
+	if (DunGenOverlay)
+	{
+		DunGenOverlay->ShowInteractButton();
+	}
+}
+void AAirsto::HideInteractButton()
+{
+	if (DunGenOverlay)
+	{
+		DunGenOverlay->HideInteractButton();
+	}
+}
+
+void AAirsto::PlayEquipMontage(const FName& SectionName)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && EquipMontage)
+	{
+		AnimInstance->Montage_Play(EquipMontage);
+		AnimInstance->Montage_JumpToSection(SectionName, EquipMontage);
+	}
+	FinishEquipping();
+}
+
+void AAirsto::Die_Implementation()
+{
+	Super::Die_Implementation();
+
+	ActionState = EActionState::EAS_Dead;
+	DisableMeshCollision();
 }
 
 void AAirsto::AttackEnd()
@@ -343,41 +385,70 @@ void AAirsto::AttackEnd()
 
 void AAirsto::DodgeEnd()
 {
-
-	ActionState = EActionState::EAS_Unoccupied;
-}
-
-void AAirsto::BlockEnd()
-{
+	Super::DodgeEnd();
 
 	ActionState = EActionState::EAS_Unoccupied;
 }
 
 void AAirsto::DisableMeshCollision()
 {
+	Super::DisableMeshCollision();
 
 }
 
 void AAirsto::EnableMeshCollision()
 {
+	Super::EnableMeshCollision();
 
 }
 
-void AAirsto::GetWeaponType(AWeapon * OverlappingWeapon)
+void AAirsto::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-    if (OverlappingWeapon->GetWeaponType() == EWeaponType::EWT_OneHanded)
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &AAirsto::Move);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAirsto::Look);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AAirsto::Jump);
+		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &AAirsto::Equip);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AAirsto::Attack);
+		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &AAirsto::Dodge);
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &AAirsto::Interact);
+
+		
+		EnhancedInputComponent->BindAction(LookXAction, ETriggerEvent::Triggered, this, &AAirsto::LookX);
+		EnhancedInputComponent->BindAction(LookYAction, ETriggerEvent::Triggered, this, &AAirsto::LookY);
+	}
+
+}
+
+void AAirsto::GetHit_Implementation(const FVector &ImpactPoint, AActor* Hitter)
+{
+    Super::GetHit_Implementation(ImpactPoint, Hitter);
+	SetWeaponCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (Attributes && Attributes ->GetHealthPercent() > 0.f)
+	{
+		ActionState = EActionState::EAS_HitReaction;
+	}
+}
+
+float AAirsto::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	HandleDamage(DamageAmount);
+    SetHUDHealth();
+    return DamageAmount;
+}
+
+void AAirsto::SetHUDHealth()
+{
+    if (DunGenOverlay && Attributes)
     {
-        OverlappingWeapon->Equip(GetMesh(), FName("RightHandSocket"), this, this);
-        CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
+        DunGenOverlay->SetHealthBarPercent(Attributes->GetHealthPercent());
     }
-    else if (OverlappingWeapon->GetWeaponType() == EWeaponType::EWT_TwoHanded)
-    {
-        OverlappingWeapon->Equip(GetMesh(), FName("TwoHandSocket"), this, this);
-        CharacterState = ECharacterState::ECS_EquippedTwoHandedWeapon;
-    }
-    OverlappingWeapon->SetOwner(this);
-    OverlappingWeapon->SetInstigator(this);
-    WeaponType = OverlappingWeapon->GetWeaponType();
-    OverlappingItem = nullptr;
-    EquippedWeapon = OverlappingWeapon;
+}
+
+void AAirsto::HandleDamage(float DamageAmount)
+{
+	Super::HandleDamage(DamageAmount);
 }
