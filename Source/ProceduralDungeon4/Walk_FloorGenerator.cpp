@@ -18,13 +18,12 @@ AWalk_FloorGenerator::AWalk_FloorGenerator()
 void AWalk_FloorGenerator::BeginPlay()
 {
 	Super::BeginPlay();
-
-	GenerateModule();
 	
 }
 
 void AWalk_FloorGenerator::GenerateModule()
 {
+	GeneratedEmptyLocations.Reset();
 	GenerateMap();
 	SpawnGeometry();
 
@@ -160,9 +159,6 @@ void AWalk_FloorGenerator::SpawnGeometry()
 				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(Pos, FRotator::ZeroRotator);
 				if (!FloorActor) continue;
 
-				FloorActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
-				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
 				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
 				if(!MeshComp)
 				{
@@ -170,10 +166,14 @@ void AWalk_FloorGenerator::SpawnGeometry()
 					continue;
 				}
 
+				MeshComp->SetMobility(EComponentMobility::Movable);
+				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 				MeshComp->SetStaticMesh(FloorMesh);
 
 				const float Scale = TileSize / BasePlaneSize;
 				FloorActor->SetActorScale3D(FVector(Scale, Scale, 1.f));
+				GeneratedEmptyLocations.Add(Pos);
 			}
 			//Walls
 			else if (bIsWall && WallMesh)
@@ -185,15 +185,15 @@ void AWalk_FloorGenerator::SpawnGeometry()
 				AWallTile* WallActor = World->SpawnActor<AWallTile>(Pos, FRotator::ZeroRotator);
 				if (!WallActor) continue;
 
-				WallActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
-				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
 				UStaticMeshComponent* MeshComp = WallActor->GetItemMesh();
 				if (!MeshComp)
 				{
 					WallActor->Destroy();
 					continue;
 				}
+
+				MeshComp->SetMobility(EComponentMobility::Movable);
+				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 				MeshComp->SetStaticMesh(WallMesh);
 
@@ -328,13 +328,14 @@ void AWalk_FloorGenerator::CreateDoors(int32 DoorCount)
 
 			if (DoorActor)
 			{
-				DoorActor->SetMobility(EComponentMobility::Movable);
-				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
 				{
 					DoorComp->SetStaticMesh(DoorMesh);
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
+
+					DoorActor->SetMobility(EComponentMobility::Movable);
+					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 				}
 				else
 				{

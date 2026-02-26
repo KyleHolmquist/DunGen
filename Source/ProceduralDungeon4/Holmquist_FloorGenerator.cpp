@@ -17,13 +17,12 @@ AHolmquist_FloorGenerator::AHolmquist_FloorGenerator()
 void AHolmquist_FloorGenerator::BeginPlay()
 {
 	Super::BeginPlay();
-
-	GenerateModule();
 	
 }
 
 void AHolmquist_FloorGenerator::GenerateModule()
 {
+	GeneratedEmptyLocations.Reset();
 	//Allocate Grid
 	GenerateRoomLayout();
 	SpawnFloorTiles();
@@ -173,6 +172,8 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 
 				const float FloorScale = TileSize / BaseSize;
 				FloorActor->SetActorScale3D(FVector(FloorScale, FloorScale, 1.f));
+
+				GeneratedEmptyLocations.Add(FloorPos);
 			}
 
 			//---- Walls around Floor ----

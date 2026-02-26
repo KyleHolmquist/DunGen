@@ -164,7 +164,6 @@ protected:
 	void SetEnemy();
 	void SetProp();
 
-	// ---- End theme ----
 
 	// ---- Dungeon Spawning ----
 
@@ -197,8 +196,8 @@ protected:
 	void InitializeDungeonLevelParams();
 	void SetDungeonSize(int WisdomAmount);
 	AFloorGeneratorBase* SpawnDungeonModule();
-	void AddEmptySpacesToArray();
 	void PopulateDungeon();
+	bool TryPopRandomEmptyLocation(FVector& OutLocation);
 	void SpawnBreakables();
 	void SpawnProps();
 	void SpawnEnemies();
@@ -209,7 +208,9 @@ protected:
 	int SetEnemyWisdom();
 	void SetEnemyPatrolPoints(AEnemy* Enemy);
 	void SetEnemyAttackTimer(AEnemy* Enemy);
+	void SetEnemyWeaponDamage(AEnemy* Enemy);
 	void StartPatrollingDelayed();
+	
 
 	// ---- Quest Text ----
 	UPROPERTY(EditDefaultsOnly, Category="Quest Text")
@@ -250,8 +251,6 @@ public:
 	TSubclassOf<ABreakableActor> GetRandomBreakable();
 	TSubclassOf<AEnemy> GetRandomEnemy();
 	TSubclassOf<AProp> GetRandomProp();
-
-	void AddToEmptyLocationsArray(FVector Location);
 
 
 };

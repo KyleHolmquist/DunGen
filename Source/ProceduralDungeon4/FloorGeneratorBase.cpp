@@ -17,6 +17,11 @@ void AFloorGeneratorBase::GenerateModule()
 void AFloorGeneratorBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (bGenerateOnBeginPlay)
+	{
+		GenerateModule();
+	}
 }
 
 void AFloorGeneratorBase::AddExteriorDoorWorld(const FVector& WorldLocation, const FRotator& WorldRotation)

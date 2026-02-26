@@ -20,6 +20,7 @@
 #include "Components/CapsuleComponent.h"
 #include "MyDialogueTypes.h"
 #include "Engine/DataTable.h"
+#include "Weapon.h"
 
 // -- Forward declarations --
 static FVector ComputeOutwardFromBounds2D(AFloorGeneratorBase* Module, const FVector& DoorWorld);
@@ -861,26 +862,10 @@ AFloorGeneratorBase* ADungeonManager::SpawnDungeonModule()
 
 	//Populate DungneonModule variable and Call GenerateModule after the config is set and the actor is finished spawning
 	DungeonModule = FloorGenerator;
-	//DungeonModule->GenerateModule();
+	DungeonModule->GenerateModule();
+	EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
 
 	return DungeonModule;
-}
-
-void ADungeonManager::AddEmptySpacesToArray()
-{
-	EmptySpaces.Reset();
-	if (!DungeonModule) return;
-
-	for (int32 Y = 0; Y < DungeonModule->GetMapHeight(); ++Y)
-	{
-		for (int32 X = 0; X < DungeonModule->GetMapWidth(); ++X)
-		{
-			if (DungeonModule->IsEmpty(X, Y))
-			{
-				EmptySpaces.Add(FIntPoint(X, Y));
-			}
-		}
-	}
 }
 
 void ADungeonManager::PopulateDungeon()
@@ -902,8 +887,20 @@ void ADungeonManager::PopulateDungeon()
 	);
 }
 
+bool ADungeonManager::TryPopRandomEmptyLocation(FVector& OutLocation)
+{
+	if (EmptyLocations.Num() == 0) return false;
+
+	const int32 Index = FMath::RandRange(0, EmptyLocations.Num() - 1);
+	OutLocation = EmptyLocations[Index];
+	EmptyLocations.RemoveAtSwap(Index);
+	return true;
+}
+
 void ADungeonManager::SpawnBreakables()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Entered spawn breakables"));
+
 	//Check to see if the EmptyLocations array is empty
 	if (EmptyLocations.Num() == 0)
 	{
@@ -915,18 +912,20 @@ void ADungeonManager::SpawnBreakables()
 	//Spawn Breakable actors
 	for (int i = BreakableQuantityInLevel; i > 0; --i)
 	{
-		//Create a random index to use
-		const int32 RandIndex = FMath::RandRange(0, EmptyLocations.Num() - 1);
-		//Select the Cell from that random index
-		const FVector Cell = EmptyLocations[RandIndex];
+		FVector Cell;
+		if (!TryPopRandomEmptyLocation(Cell))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("DungeonManager - ran out of EmptyLocations while spawning breakables."));
+			return;
+		}
+
 		//Move the Breakable up a bit so it doesn't fall through the floor
 		const FVector Location = FVector(Cell.X, Cell.Y, Cell.Z + 10.f);
-		//Remove the chosen cell so it won't be used again
-		EmptyLocations.RemoveAtSwap(RandIndex);
-		//Create a random float for the object's z rotation
-		float RandomZ = FMath::RandRange(0, 360);
+
+		//Create a random float for the object's yaw rotation
+		float RandomYaw = FMath::RandRange(0.f, 360.f);
 		//Create the Rotator
-		FRotator Rotation =  FRotator(0.f, 0.f, 0.f);
+		FRotator Rotation =  FRotator(0.f, RandomYaw, 0.f);
 		//Declare the FTransform
 		const FTransform SpawnTransform(Rotation, Location);
 
@@ -965,18 +964,19 @@ void ADungeonManager::SpawnProps()
 	//Spawn Props
 	for (int i = PropQuantityInLevel; i > 0; --i)
 	{
-		//Create a random index to use
-		const int32 RandIndex = FMath::RandRange(0, EmptyLocations.Num() - 1);
-		//Select the Cell from that random index
-		const FVector Cell = EmptyLocations[RandIndex];
+		FVector Cell;
+		if (!TryPopRandomEmptyLocation(Cell))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("DungeonManager - ran out of EmptyLocations while spawning props."));
+			return;
+		}
+
 		//Move the Breakable up a bit so it doesn't fall through the floor
 		const FVector Location = FVector(Cell.X, Cell.Y, Cell.Z + 10.f);
-		//Remove the chosen cell so it won't be used again
-		EmptyLocations.RemoveAtSwap(RandIndex);
 		//Create a random float for the object's z rotation
-		float RandomZ = FMath::RandRange(0, 360);
+		float RandomYaw = FMath::RandRange(0.f, 360.f);
 		//Create the Rotator
-		FRotator Rotation =  FRotator(0.f, 0.f, RandomZ);
+		FRotator Rotation =  FRotator(0.f, RandomYaw, 0.f);
 		//Declare the FTransform
 		const FTransform SpawnTransform(FRotator::ZeroRotator, Location);
 
@@ -1022,20 +1022,19 @@ void ADungeonManager::SpawnEnemies()
 		EnemyConfig.EnemyClass = SelectedEnemyClass;
 		EnemyConfig.MaxHealth = SetEnemyHealth();
 		EnemyConfig.WisdomAmount = SetEnemyWisdom();
-		
-		//Create a random index to use
-		const int32 RandIndex = FMath::RandRange(0, EmptyLocations.Num() - 1);
-		//Select the Cell from that random index
-		const FVector Cell = EmptyLocations[RandIndex];
 
-		//Remove used location so it can't be reused
-		EmptyLocations.RemoveAtSwap(RandIndex);
+		FVector Cell;
+		if (!TryPopRandomEmptyLocation(Cell))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("DungeonManager - ran out of EmptyLocations while spawning enemies."));
+			return;
+		}
 
 		//Set the Enemy's location
 		const FVector Location = FVector(Cell.X, Cell.Y, 10.f);
 
 		//Create a random float for the object's z rotation
-		const float RandomYaw = FMath::RandRange(0, 360);
+		const float RandomYaw = FMath::RandRange(0.f, 360.f);
 		//Create the Rotator
 		const FRotator Rotation = FRotator(0.f, RandomYaw, 0.f );
 
@@ -1060,8 +1059,9 @@ void ADungeonManager::SpawnEnemies()
 		
 		//Configure before construction
 		Enemy->Initialize(EnemyConfig);
-		// SetEnemyPatrolPoints(Enemy);
+		//SetEnemyPatrolPoints(Enemy);
 		SetEnemyAttackTimer(Enemy);
+		SetEnemyWeaponDamage(Enemy);
 		SpawnedEnemies.Add(Enemy);
 
 		//Raise the enemy up a bit so the capsule rests on the floor plane
@@ -1143,6 +1143,19 @@ void ADungeonManager::SetEnemyAttackTimer(AEnemy* Enemy)
 	float TimerMin = 1.f - (AccruedWisdom / 100.f);
 	float TimerMax = 1.5f - (AccruedWisdom / 200.f);
 	Enemy->SetAttackTimer(TimerMin, TimerMax);
+}
+
+void ADungeonManager::SetEnemyWeaponDamage(AEnemy* Enemy)
+{
+	if (!Enemy) return;
+
+	AWeapon* Weapon = Enemy->GetEquippedWeapon();
+	if (!Weapon) return;
+
+	float NewDamage = Weapon->GetWeaponDamage();
+	NewDamage += (AccruedWisdom * 0.01f);
+
+	Weapon->SetWeaponDamage(NewDamage);
 }
 
 EDungeonTheme ADungeonManager::GetRandomDungeonTheme() const
@@ -1344,11 +1357,6 @@ TSubclassOf<AProp> ADungeonManager::GetRandomProp()
 	}
 
 	return ThemedProps[FMath::RandRange(0, ThemedProps.Num() - 1)];
-}
-
-void ADungeonManager::AddToEmptyLocationsArray(FVector Location)
-{
-	EmptyLocations.Add(Location);
 }
 
 bool ADungeonManager::GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue)

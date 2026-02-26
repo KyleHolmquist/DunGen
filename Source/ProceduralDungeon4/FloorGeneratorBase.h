@@ -134,4 +134,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category=Dungeon)
 	ADungeonManager* DungeonManager;
+
+    UPROPERTY()
+    TArray<FVector> GeneratedEmptyLocations;
+
+public:
+    FORCEINLINE const TArray<FVector>& GetGeneratedEmptyLocations() const { return GeneratedEmptyLocations; }
 };

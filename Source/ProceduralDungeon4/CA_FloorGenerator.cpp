@@ -20,14 +20,12 @@ ACA_FloorGenerator::ACA_FloorGenerator()
 void ACA_FloorGenerator::BeginPlay()
 {
 	Super::BeginPlay();
-
-	GenerateModule();
-	
 	
 }
 
 void ACA_FloorGenerator::GenerateModule()
 {
+	GeneratedEmptyLocations.Reset();
 	InitializeMap();
 	RunSimulation();
 	EnsureConnectivity();
@@ -184,17 +182,7 @@ void ACA_FloorGenerator::SpawnGeometry()
 				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorTileClass, WorldPos, FRotator::ZeroRotator, Params);
 				if (!FloorActor) continue;
-
-				//Add the Floor Actor's location to the empty spaces array
-				if (DungeonManager)
-				{
-					DungeonManager->AddToEmptyLocationsArray(FloorActor->GetActorLocation());
-				}
 				
-
-				FloorActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
-				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
 				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
 				if (!MeshComp)
 				{
@@ -202,11 +190,16 @@ void ACA_FloorGenerator::SpawnGeometry()
 					continue;
 				}
 
+				MeshComp->SetMobility(EComponentMobility::Movable);
+				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
 				//MeshComp->SetStaticMesh(FloorMesh);
 
 				//Center the tile
 				const float ScaleFactor = TileSize / BasePlaneSize;
 				FloorActor->SetActorScale3D(FVector(ScaleFactor, ScaleFactor, 1.f));
+
+				GeneratedEmptyLocations.Add(WorldPos);
 			}
 
 			//Spawn wall mesh where there's a wall
@@ -219,15 +212,15 @@ void ACA_FloorGenerator::SpawnGeometry()
 				AWallTile* WallActor = World->SpawnActor<AWallTile>(WallTileClass, WallPos, FRotator::ZeroRotator, Params);
 				if (!WallActor) continue;
 
-				WallActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
-				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
 				UStaticMeshComponent* MeshComp = WallActor->GetItemMesh();
 				if (!MeshComp)
 				{
 					WallActor->Destroy();
 					continue;
 				}
+
+				MeshComp->SetMobility(EComponentMobility::Movable);
+				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 				//MeshComp->SetStaticMesh(WallMesh);
 
@@ -543,24 +536,20 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 					if (FloorActor)
 					{
 
-						FloorActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
-						FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
 						if (UStaticMeshComponent* FloorComp = FloorActor->GetItemMesh())
 						{
 							//FloorComp->SetStaticMesh(FloorTile);
 							FloorActor->SetActorScale3D(FVector(ScaleFactor, ScaleFactor, 1.f));
+
+							FloorComp->SetMobility(EComponentMobility::Movable);
+							FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 						}
 						else
 						{
 							FloorActor->Destroy();
 						}
 
-						//Add the Floor Actor's location to the empty spaces array
-						if (DungeonManager)
-						{
-							DungeonManager->AddToEmptyLocationsArray(FloorActor->GetActorLocation());
-						}
+						GeneratedEmptyLocations.Add(FloorPos);
 						
 					}
 				}
@@ -591,13 +580,14 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 
 			if (DoorActor)
 			{
-				DoorActor->SetMobility(EComponentMobility::Movable);
-				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
 				{
 					DoorComp->SetStaticMesh(DoorMesh);
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
+					
+					DoorActor->SetMobility(EComponentMobility::Movable);
+					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 				}
 				else
 				{

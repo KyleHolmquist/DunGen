@@ -78,5 +78,7 @@ private:
 public:
 	FORCEINLINE UBoxComponent* GetWeaponBox() const { return WeaponBox; }
 	FORCEINLINE EWeaponType GetWeaponType() const { return WeaponType; }
+	FORCEINLINE float GetWeaponDamage() const { return Damage; }
+	FORCEINLINE void SetWeaponDamage(float WeaponDamage) { Damage = WeaponDamage; }
 	
 };

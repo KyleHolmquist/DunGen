@@ -27,13 +27,12 @@ ABSP_FloorGenerator::ABSP_FloorGenerator()
 void ABSP_FloorGenerator::BeginPlay()
 {
 	Super::BeginPlay();
-
-	GenerateModule();
 	
 }
 
 void ABSP_FloorGenerator::GenerateModule()
 {
+	GeneratedEmptyLocations.Reset();
 	GenerateBSP();
 	SpawnFloorPlanes();
 
@@ -218,20 +217,22 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
         // -- Floor --
         AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorLocation, FRotator::ZeroRotator);
         if (!FloorActor) continue;
-		
-		FloorActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
-		FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
         if (UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh())
         {
             MeshComp->SetStaticMesh(FloorMesh);
             FloorActor->SetActorScale3D(FloorScale);
+		
+			MeshComp->SetMobility(EComponentMobility::Movable);
+			FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
         }
         else
         {
             FloorActor->Destroy();
             continue;
         }
+
+		GeneratedEmptyLocations.Add(FloorLocation);
 
         // -- Walls as equal-length segments --
         if (!WallMesh || WallHeight <= 0.f) continue;
@@ -245,15 +246,15 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
             AWallTile* Segment = World->SpawnActor<AWallTile>(Location, Rot);
             if (!Segment) return nullptr;
 
-            Segment->GetItemMesh()->SetMobility(EComponentMobility::Movable);
-			Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
             UStaticMeshComponent* WComp = Segment->GetItemMesh();
             if (!WComp)
             {
                 Segment->Destroy();
                 return nullptr;
             }
+
+            WComp->SetMobility(EComponentMobility::Movable);
+			Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
             WComp->SetStaticMesh(WallMesh);
 
