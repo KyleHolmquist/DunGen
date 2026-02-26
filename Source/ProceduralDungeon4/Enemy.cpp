@@ -2,27 +2,31 @@
 
 
 #include "Enemy.h"
-#include "AIController.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "HealthBarComponent.h"
+#include "Weapon.h"
+#include "Wisdom.h"
+#include "HealthPickup.h"
 #include "Perception/PawnSensingComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Weapon.h"
-#include "Math/UnrealMathUtility.h"
-#include "Wisdom.h"
-#include "AttributeComponent.h"
+#include "AIController.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "Components/BoxComponent.h"
+#include "AttributeComponent.h"
 
+// Sets default values
 AEnemy::AEnemy()
 {
-	
+ 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 	GetMesh()->SetGenerateOverlapEvents(true);
+
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 
     HealthBarWidget = CreateDefaultSubobject<UHealthBarComponent>(TEXT("Health Bar"));
     HealthBarWidget->SetupAttachment(GetRootComponent());
@@ -36,6 +40,39 @@ AEnemy::AEnemy()
     PawnSensing->SightRadius = 4000.f;
     PawnSensing->SetPeripheralVisionAngle(45.f);
 
+    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
+}
+
+void AEnemy::Initialize(const FEnemyConfig& InConfig)
+{
+    EnemyConfig = InConfig;
+    TreasureClass = EnemyConfig.InitTreasureClass;
+    if (Attributes)
+    {
+        Attributes->InitHealth(EnemyConfig.MaxHealth);
+    }
+}
+
+void AEnemy::SetPatrolPoints(AActor* PatrolTarget1, AActor* PatrolTarget2)
+{
+    PatrolTarget = PatrolTarget1;
+    PatrolTargets.Add(PatrolTarget1);
+    PatrolTargets.Add(PatrolTarget2);
+}
+
+void AEnemy::SetAttackTimer(float TimerMin, float TimerMax)
+{
+    AttackMin = TimerMin;
+    AttackMax = TimerMax;
+}
+
+void AEnemy::BeginPlay()
+{
+	Super::BeginPlay();
+
+    if (PawnSensing) PawnSensing->OnSeePawn.AddDynamic(this, &AEnemy::PawnSeen);
+    InitializeEnemy();
 }
 
 void AEnemy::Tick(float DeltaTime)
@@ -57,6 +94,9 @@ float AEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEv
 {
     HandleDamage(DamageAmount);
     CombatTarget = EventInstigator->GetPawn();
+    // FString TargetName;
+    // if (CombatTarget) TargetName = CombatTarget->GetName();
+    // UE_LOG(LogTemp, Warning, TEXT("Combat Target is %s"), *TargetName);
     if (IsInsideAttackRadius())
     {
         EnemyState = EEnemyState::EES_Attacking;
@@ -92,21 +132,12 @@ void AEnemy::GetHit_Implementation(const FVector& ImpactPoint, AActor* Hitter)
        if (!IsDead()) StartAttackTimer();
     }
 }
-void AEnemy::BeginPlay()
-{
-	Super::BeginPlay();
-
-    if (PawnSensing) PawnSensing->OnSeePawn.AddDynamic(this, &AEnemy::PawnSeen);
-    InitializeEnemy();
-}
 void AEnemy::Die_Implementation()
 {
     Super::Die_Implementation();
-    
     EnemyState = EEnemyState::EES_Dead;
     ClearAttackTimer();
     HideHealthBar();
-    UE_LOG(LogTemp, Warning, TEXT("AboutToDisableCapsule"));
     DisableCapsule();
     SetLifeSpan(DeathLifeSpan);
     GetCharacterMovement()->bOrientRotationToMovement = false;
@@ -122,16 +153,34 @@ void AEnemy::SpawnWisdom()
         AWisdom* SpawnedWisdom = World->SpawnActor<AWisdom>(WisdomClass, SpawnLocation, GetActorRotation());
         if (SpawnedWisdom)
         {
-            SpawnedWisdom->SetWisdom(Attributes->GetWisdom());
+            SpawnedWisdom->SetWisdomAmount(Attributes->GetWisdom());
             SpawnedWisdom->SetOwner(this);
         }
     }
+}
+
+void AEnemy::SpawnHealthPickup()
+{
+    UWorld *World = GetWorld();
+    // if (World && HealthPickupClass && EnemyConfig)
+    // {
+    //     const FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 125.f);
+    //     AHealthPickup* SpawnedHealth = World->SpawnActor<AHealthPickup>(HealthPickupClass, SpawnLocation, GetActorRotation());
+    //     if (SpawnedHealth)
+    //     {
+    //         SpawnedHealth->SetHealth(Attributes->GetHealth());
+    //         SpawnedHealth->SetOwner(this);
+    //     }
+    // }
 }
 void AEnemy::Attack()
 {
     Super::Attack();
     if (CombatTarget == nullptr) return;
     EnemyState = EEnemyState::EES_Engaged;
+    FRotator LookAt = (CombatTarget->GetActorLocation() - GetActorLocation()).Rotation();
+    SetActorRotation(FRotator(0.f, LookAt.Yaw, 0.f));
+    //EnemyController->SetFocus(CombatTarget);
     PlayAttackMontage();
 }
 bool AEnemy::CanAttack()
@@ -156,6 +205,28 @@ void AEnemy::HandleDamage(float DamageAmount)
     if (Attributes && HealthBarWidget)
     {
         HealthBarWidget->SetHealthPercent(Attributes->GetHealthPercent());
+    }
+}
+
+void AEnemy::RagdollCharacter()
+{
+    //Disable capsule collision
+    UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+    if (CapsuleComp)
+    {
+        CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+    }
+
+    //Enable physics simulation on the mesh
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (MeshComp)
+    {
+        MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
+        MeshComp->SetAllBodiesSimulatePhysics(true);
+        MeshComp->SetSimulatePhysics(true);
+        MeshComp->WakeAllRigidBodies();
+        MeshComp->bBlendPhysics = true;
     }
 }
 
@@ -233,6 +304,33 @@ void AEnemy::LoseInterest()
 
 void AEnemy::StartPatrolling()
 {
+    //Ensure patrol data exists
+    if (!PatrolTarget || PatrolTargets.Num() == 0 || !PatrolTargets[0])
+    {
+        UE_LOG(LogTemp, Warning, TEXT("StartPatrolling failed: Patrol targets invalid"));
+        return;
+    }
+    //Check for controller
+    AAIController* AI = Cast<AAIController>(GetController());
+
+    if (!AI)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("StartPatrolling: No controller yet, retrying..."));
+        
+        //Retry in 0.1 seconds
+        GetWorldTimerManager().SetTimer(
+            PatrolStartRetryHandle,
+            this,
+            &AEnemy::StartPatrolling,
+            0.1f,
+            false
+        );
+
+        return;
+    }
+
+    EnemyController = AI;
+
     EnemyState = EEnemyState::EES_Patrolling;
     GetCharacterMovement()->MaxWalkSpeed = PatrollingSpeed;
     MoveToTarget(PatrolTarget);
@@ -309,11 +407,19 @@ bool AEnemy::InTargetRange(AActor* Target, double Radius)
 
 void AEnemy::MoveToTarget(AActor* Target)
 {
-    if (EnemyController == nullptr || Target == nullptr) return;
-        FAIMoveRequest MoveRequest;
-        MoveRequest.SetGoalActor(Target);
-        MoveRequest.SetAcceptanceRadius(AcceptanceRadius);
-        EnemyController->MoveTo(MoveRequest);
+    if (Target == nullptr) return;
+
+    //Recover controller lazily if it gets lost
+    if (EnemyController == nullptr)
+    {
+        EnemyController = Cast<AAIController>(GetController());
+        if (EnemyController == nullptr) return;
+    }
+    
+    FAIMoveRequest MoveRequest;
+    MoveRequest.SetGoalActor(Target);
+    MoveRequest.SetAcceptanceRadius(AcceptanceRadius);
+    EnemyController->MoveTo(MoveRequest);
 }
 
 AActor* AEnemy::ChoosePatrolTarget()
@@ -364,3 +470,24 @@ void AEnemy::SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled)
     }
 }
 
+
+
+void AEnemy::SetMaxHealth(int SelectedMaxHealth)
+{
+    if (!Attributes) return;
+    Attributes->InitHealth(SelectedMaxHealth);
+}
+void AEnemy::SetWisdomAmount(int SelectedWisdomAmount)
+{
+    if (!Attributes) return;
+    Attributes->InitWisdom(SelectedWisdomAmount);
+}
+void AEnemy::SetHealthPickupAmount(int SelectedHealthPickupAmount)
+{
+    if (!Attributes) return;
+    Attributes->InitHealth(SelectedHealthPickupAmount);
+}
+void AEnemy::SetTreasureClass(TSubclassOf<ATreasure> SelectedTreasureClass)
+{
+    TreasureClass = SelectedTreasureClass;
+}

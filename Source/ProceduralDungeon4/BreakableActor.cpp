@@ -75,3 +75,9 @@ void ABreakableActor::GetHit_Implementation(const FVector& ImpactPoint, AActor* 
 		World->SpawnActor<ATreasure>(TreasureClasses[Selection], Location, GetActorRotation());
 	}
 }
+
+
+void ABreakableActor::SetTreasureClass(TSubclassOf<ATreasure> SelectedTreasureClass )
+{
+	TreasureClass = SelectedTreasureClass;
+}

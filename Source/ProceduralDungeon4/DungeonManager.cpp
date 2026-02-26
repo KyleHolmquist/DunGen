@@ -8,13 +8,23 @@
 #include "Holmquist_FloorGenerator.h"
 #include "Walk_FloorGenerator.h"
 #include "Engine/StaticMeshActor.h"
+#include "FloorTile.h"
+#include "WallTile.h"
+#include "Treasure.h"
+#include "BreakableActor.h"
+#include "Enemy.h"
+#include "Prop.h"
 #include "Components/StaticMeshComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "FloorGeneratorBase.h"
+#include "Components/CapsuleComponent.h"
+#include "MyDialogueTypes.h"
+#include "Engine/DataTable.h"
 
 // -- Forward declarations --
 static FVector ComputeOutwardFromBounds2D(AFloorGeneratorBase* Module, const FVector& DoorWorld);
 static bool SnapModuleDoorToTarget(AFloorGeneratorBase* ModuleB, int32 DoorBIndex, const FVector& TargetDoorWorldLocation, const FVector& TargetDoorForward2D);
 
-// Sets default values
 ADungeonManager::ADungeonManager()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -22,25 +32,46 @@ ADungeonManager::ADungeonManager()
 
 }
 
-// Called when the game starts or when spawned
 void ADungeonManager::BeginPlay()
 {
 	Super::BeginPlay();
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	InitializeDungeonLevelParams();
+	DungeonModule = SpawnDungeonModule();
+	PopulateDungeon();
+
+	//Start async wait until both modules finish initializing
+	FTimerHandle Timer;
+	World->GetTimerManager().SetTimer
+	(
+		Timer,
+		FTimerDelegate::CreateUObject(this, &ADungeonManager::TryConnectModules),
+		0.1f,      // wait 0.1 second
+		false
+	);
+
+	//Old BeginPlay() code
+
+	/*
+	const FTransform FirstLocation(GetActorRotation(), GetActorLocation());
+
+	//Spawn the first module at the manager's location
+	FirstModule = SpawnModule(FirstModuleClass, GetActorLocation(), FirstModuleDoors);
+	if (!FirstModule) return;
+	
+
+
+	
 
 	if (!FirstModuleClass || !SecondModuleClass)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("DungeonManager Module classes not set"));
 		return;
 	}
-
-	UWorld* World = GetWorld();
-	if (!World) return;
-
-	const FTransform FirstLocation(GetActorRotation(), GetActorLocation());
-
-	// //Spawn the first module at the manager's location
-	// FirstModule = SpawnModule(FirstModuleClass, GetActorLocation(), FirstModuleDoors);
-	// if (!FirstModule) return;
+	
 	FirstModule = SpawnConfiguredModule(FirstModuleClass, FirstLocation, MapWidth, MapHeight, FirstModuleDoors);
 	if (ABSP_FloorGenerator* BSP = Cast<ABSP_FloorGenerator>(FirstModule))
 	{
@@ -93,17 +124,26 @@ void ADungeonManager::BeginPlay()
 	{
 		Holmquist-> NumTiles = HolmquistTiles;
 	}
+	*/
+	FString PlayerName = TEXT("Airsto");
+	FString SelectedThemeText = TEXT("Castle");
 
-	//Start async wait until both modules finish initializing
-	FTimerHandle Timer;
-	World->GetTimerManager().SetTimer
-	(
-		Timer,
-		FTimerDelegate::CreateUObject(this, &ADungeonManager::TryConnectModules),
-		0.1f,      // wait 0.1 second
-		false
-	);
-	
+	FString SelectedTreasureText;
+	if (SelectedTreasureClass)
+	{
+		const ATreasure* TreasureCDO = SelectedTreasureClass->GetDefaultObject<ATreasure>();
+		if (TreasureCDO)
+		{
+			SelectedTreasureText = TreasureCDO->GetDisplayName();
+		}
+	}
+
+	FText QuestText = GenerateQuestText(QuestAdjectivesTable, PlayerName, SelectedThemeText, SelectedTreasureText);
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, QuestText.ToString());
+	}
 }
 
 // Called every frame
@@ -131,6 +171,8 @@ AFloorGeneratorBase* ADungeonManager::SpawnModule(TSubclassOf<AFloorGeneratorBas
 
 	//Tell the module how many exterior doors are desired
 	Module->DesiredExteriorDoors = DesiredDoors;
+
+	Module->SetDungeonManager(this);
 
 	Module->GenerateModule();
 
@@ -238,8 +280,7 @@ AFloorGeneratorBase* ADungeonManager::SpawnConfiguredModule(
 	if (!Module) return nullptr;
 
 	//Construction parameters to set before BeginPlay
-	Module->MapWidth = InMapWidth;
-	Module->MapHeight = InMapHeight;
+	Module->InitMapSize(InMapWidth, InMapHeight);
 	Module->DesiredExteriorDoors = InDoorCount;
 
 	//Run ConstructionScript + BeginPlay using the defined values
@@ -739,4 +780,639 @@ bool ADungeonManager::BuildCorridorFromDoorOnBounds(AFloorGeneratorBase* Module,
     }
 
     return true;
+}
+
+void ADungeonManager::SetDungeonTheme()
+{
+	DungeonTheme = GetRandomDungeonTheme();	
+}
+
+void ADungeonManager::SetFloorGenerator()
+{
+	SelectedFloorGeneratorClass = GetRandomFloorGenerator();	
+}
+
+void ADungeonManager::SetFloorTile()
+{
+	SelectedFloorTileClass = GetRandomFloorTile();	
+}
+
+void ADungeonManager::SetWallTile()
+{
+	SelectedWallTileClass = GetRandomWallTile();	
+}
+
+void ADungeonManager::SetTreasure()
+{
+	SelectedTreasureClass = GetRandomTreasure();	
+}
+
+void ADungeonManager::SetBreakable()
+{
+	SelectedBreakableClass = GetRandomBreakable();	
+}
+
+void ADungeonManager::SetEnemy()
+{
+	SelectedEnemyClass = GetRandomEnemy();	
+}
+
+void ADungeonManager::SetProp()
+{
+	SelectedPropClass = GetRandomProp();	
+}
+
+void ADungeonManager::InitializeDungeonLevelParams()
+{
+	SetDungeonTheme();
+	SetFloorGenerator();
+	SetFloorTile();
+	SetWallTile();
+	SetDungeonSize(AccruedWisdom);
+}
+
+void ADungeonManager::SetDungeonSize(int WisdomAmount)
+{
+	DungeonSize = WisdomAmount * 20;
+}
+
+AFloorGeneratorBase* ADungeonManager::SpawnDungeonModule()
+{
+	FTransform SpawnTransform = FTransform::Identity;
+
+	//Create the FloorGenerator using SpawnActorDeferred to allow other setup actions to occur
+	AFloorGeneratorBase* FloorGenerator = GetWorld()->SpawnActorDeferred<AFloorGeneratorBase>(
+		SelectedFloorGeneratorClass,
+		SpawnTransform,
+		this,
+		nullptr,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn
+	);
+
+	if (!FloorGenerator) return nullptr;
+	
+	//Configure before construction
+	FloorGenerator->SetMapSize(MapWidth, MapHeight);
+	FloorGenerator->SetFloorTile(SelectedFloorTileClass);
+	FloorGenerator->SetWallTile(SelectedWallTileClass);
+	FloorGenerator->SetDungeonManager(this);
+
+	UGameplayStatics::FinishSpawningActor(FloorGenerator, SpawnTransform);
+
+	//Populate DungneonModule variable and Call GenerateModule after the config is set and the actor is finished spawning
+	DungeonModule = FloorGenerator;
+	//DungeonModule->GenerateModule();
+
+	return DungeonModule;
+}
+
+void ADungeonManager::AddEmptySpacesToArray()
+{
+	EmptySpaces.Reset();
+	if (!DungeonModule) return;
+
+	for (int32 Y = 0; Y < DungeonModule->GetMapHeight(); ++Y)
+	{
+		for (int32 X = 0; X < DungeonModule->GetMapWidth(); ++X)
+		{
+			if (DungeonModule->IsEmpty(X, Y))
+			{
+				EmptySpaces.Add(FIntPoint(X, Y));
+			}
+		}
+	}
+}
+
+void ADungeonManager::PopulateDungeon()
+{
+	//AddEmptySpacesToArray();
+	TotalEmptySpaces = EmptyLocations.Num();
+	SetTreasure();
+	SpawnEnemies();
+	SpawnBreakables();
+	SpawnProps();
+
+	//Set Delay
+	GetWorldTimerManager().SetTimer(
+    PatrolDelayHandle,
+    this,
+    &ADungeonManager::StartPatrollingDelayed,
+    5.0f,
+    false
+	);
+}
+
+void ADungeonManager::SpawnBreakables()
+{
+	//Check to see if the EmptyLocations array is empty
+	if (EmptyLocations.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DungeonManager - EmptyLocations array is... EMPTY!!"));
+		return;
+	}
+	SetNumBreakablesInLevel();
+
+	//Spawn Breakable actors
+	for (int i = BreakableQuantityInLevel; i > 0; --i)
+	{
+		//Create a random index to use
+		const int32 RandIndex = FMath::RandRange(0, EmptyLocations.Num() - 1);
+		//Select the Cell from that random index
+		const FVector Cell = EmptyLocations[RandIndex];
+		//Move the Breakable up a bit so it doesn't fall through the floor
+		const FVector Location = FVector(Cell.X, Cell.Y, Cell.Z + 10.f);
+		//Remove the chosen cell so it won't be used again
+		EmptyLocations.RemoveAtSwap(RandIndex);
+		//Create a random float for the object's z rotation
+		float RandomZ = FMath::RandRange(0, 360);
+		//Create the Rotator
+		FRotator Rotation =  FRotator(0.f, 0.f, 0.f);
+		//Declare the FTransform
+		const FTransform SpawnTransform(Rotation, Location);
+
+		SetBreakable();
+
+		//Create the BreakableActor using SpawnActorDeferred to allow other setup actions to occur
+		ABreakableActor* Breakable = GetWorld()->SpawnActorDeferred<ABreakableActor>(
+			SelectedBreakableClass,
+			SpawnTransform,
+			this,
+			nullptr,
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+		);
+
+		if (!Breakable) return;
+
+		SpawnedActors.Add(Breakable);
+
+		Breakable->SetTreasureClass(SelectedTreasureClass);
+
+		UGameplayStatics::FinishSpawningActor(Breakable, SpawnTransform);
+	}
+}
+
+void ADungeonManager::SpawnProps()
+{	
+	//Check to see if the EmptyLocations array is empty
+	if (EmptyLocations.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DungeonManager - EmptyLocations array is... EMPTY!!"));
+		return;
+	}
+
+	SetNumPropsInLevel();
+
+	//Spawn Props
+	for (int i = PropQuantityInLevel; i > 0; --i)
+	{
+		//Create a random index to use
+		const int32 RandIndex = FMath::RandRange(0, EmptyLocations.Num() - 1);
+		//Select the Cell from that random index
+		const FVector Cell = EmptyLocations[RandIndex];
+		//Move the Breakable up a bit so it doesn't fall through the floor
+		const FVector Location = FVector(Cell.X, Cell.Y, Cell.Z + 10.f);
+		//Remove the chosen cell so it won't be used again
+		EmptyLocations.RemoveAtSwap(RandIndex);
+		//Create a random float for the object's z rotation
+		float RandomZ = FMath::RandRange(0, 360);
+		//Create the Rotator
+		FRotator Rotation =  FRotator(0.f, 0.f, RandomZ);
+		//Declare the FTransform
+		const FTransform SpawnTransform(FRotator::ZeroRotator, Location);
+
+		SetProp();
+
+		//Create the Prop using SpawnActorDeferred to allow other setup actions to occur
+		AProp* Prop = GetWorld()->SpawnActorDeferred<AProp>(
+			SelectedPropClass,
+			SpawnTransform,
+			this,
+			nullptr,
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+		);
+
+		if (!Prop) return;
+
+		SpawnedActors.Add(Prop);
+
+		UGameplayStatics::FinishSpawningActor(Prop, SpawnTransform);
+	}
+}
+
+void ADungeonManager::SpawnEnemies()
+{
+	
+	FEnemyConfig EnemyConfig;
+
+	//Check to see if the EmptyLocations array is empty
+	if (EmptyLocations.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DungeonManager - EmptyLocations array is... EMPTY!!"));
+		return;
+	}
+
+	SetNumEnemiesInLevel();
+	UE_LOG(LogTemp, Warning, TEXT("NumEnemiesInLevel = %i"), EnemyQuantityInLevel);
+
+	//Spawn Enemy actors
+	for (int i = EnemyQuantityInLevel; i > 0; --i)
+	{
+		//Set up Enemy variables before spawning it.
+		SetEnemy();
+		EnemyConfig.EnemyClass = SelectedEnemyClass;
+		EnemyConfig.MaxHealth = SetEnemyHealth();
+		EnemyConfig.WisdomAmount = SetEnemyWisdom();
+		
+		//Create a random index to use
+		const int32 RandIndex = FMath::RandRange(0, EmptyLocations.Num() - 1);
+		//Select the Cell from that random index
+		const FVector Cell = EmptyLocations[RandIndex];
+
+		//Remove used location so it can't be reused
+		EmptyLocations.RemoveAtSwap(RandIndex);
+
+		//Set the Enemy's location
+		const FVector Location = FVector(Cell.X, Cell.Y, 10.f);
+
+		//Create a random float for the object's z rotation
+		const float RandomYaw = FMath::RandRange(0, 360);
+		//Create the Rotator
+		const FRotator Rotation = FRotator(0.f, RandomYaw, 0.f );
+
+		//Declare the FTransform
+		FTransform SpawnTransform(Rotation, Location);
+
+		// Force floor Z
+		FVector Loc = SpawnTransform.GetLocation();
+		Loc.Z = 0.f;
+		SpawnTransform.SetLocation(Loc);
+
+		//Create the Enemy using SpawnActorDeferred to allow other setup actions to occur
+		AEnemy* Enemy = GetWorld()->SpawnActorDeferred<AEnemy>(
+			SelectedEnemyClass,
+			SpawnTransform,
+			this,
+			nullptr,
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+		);
+
+		if (!Enemy) continue;
+		
+		//Configure before construction
+		Enemy->Initialize(EnemyConfig);
+		// SetEnemyPatrolPoints(Enemy);
+		SetEnemyAttackTimer(Enemy);
+		SpawnedEnemies.Add(Enemy);
+
+		//Raise the enemy up a bit so the capsule rests on the floor plane
+		float HalfHeight = 0.f;
+		if (UCapsuleComponent* Capsule = Enemy->GetCapsuleComponent())
+		{
+			HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+		}
+
+		//Adjust SpawnTransform Z
+		FVector Adjusted = SpawnTransform.GetLocation();
+		Adjusted.Z = 0.f + HalfHeight;
+		SpawnTransform.SetLocation(Adjusted);
+
+		UGameplayStatics::FinishSpawningActor(Enemy, SpawnTransform);
+
+		// //Start patrolling after spawn has finished
+		// Enemy->StartPatrolling();
+	}
+}
+
+void ADungeonManager::SetNumBreakablesInLevel()
+{
+	BreakableQuantityInLevel = TotalEmptySpaces / 30;
+}
+
+void ADungeonManager::SetNumPropsInLevel()
+{
+	PropQuantityInLevel = TotalEmptySpaces / 7;
+}
+
+void ADungeonManager::SetNumEnemiesInLevel()
+{
+	EnemyQuantityInLevel = 1+ (TotalEmptySpaces / 50) + (AccruedWisdom / 10);
+}
+
+int ADungeonManager::SetEnemyHealth()
+{
+	return EnemyHealth = FMath::RandRange(25, 100);
+}
+
+int ADungeonManager::SetEnemyWisdom()
+{
+	return EnemyWisdom = EnemyHealth / 5;
+}
+
+void ADungeonManager::SetEnemyPatrolPoints(AEnemy* Enemy)
+{
+	if (!Enemy) return;
+	if (SpawnedActors.Num() < 2)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Not enough spawned actors. Only %i"), SpawnedActors.Num());
+		return;
+	}
+	TArray<AActor*> SpawnedActorsToChooseFrom = SpawnedActors;
+
+	int RandIndex1 = FMath::RandRange(0, SpawnedActorsToChooseFrom.Num() - 1);
+	AActor* PatrolActor1 = SpawnedActorsToChooseFrom[RandIndex1];
+	SpawnedActorsToChooseFrom.RemoveAtSwap(RandIndex1);
+
+	int RandIndex2 = FMath::RandRange(0, SpawnedActorsToChooseFrom.Num() - 1);
+	AActor* PatrolActor2 = SpawnedActorsToChooseFrom[RandIndex2];
+	SpawnedActorsToChooseFrom.RemoveAtSwap(RandIndex2);
+
+	Enemy->SetPatrolPoints(PatrolActor1, PatrolActor2);
+}
+
+void ADungeonManager::StartPatrollingDelayed()
+{
+	for (AEnemy* Enemy : SpawnedEnemies)
+	{
+		SetEnemyPatrolPoints(Enemy);
+		Enemy->StartPatrolling();
+	}
+}
+
+void ADungeonManager::SetEnemyAttackTimer(AEnemy* Enemy)
+{
+	float TimerMin = 1.f - (AccruedWisdom / 100.f);
+	float TimerMax = 1.5f - (AccruedWisdom / 200.f);
+	Enemy->SetAttackTimer(TimerMin, TimerMax);
+}
+
+EDungeonTheme ADungeonManager::GetRandomDungeonTheme() const
+{
+	return DungeonThemes[FMath::RandRange(0, DungeonThemes.Num() - 1)];	
+}
+
+TSubclassOf<AFloorGeneratorBase> ADungeonManager::GetRandomFloorGenerator()
+{
+	if (!bThemedFloorGeneratorsPopulated)
+	{
+		for (TSubclassOf<AFloorGeneratorBase> FloorGenerator : FloorGenerators)
+		{
+			if (!FloorGenerator) continue;
+
+			//Class Default Object
+			const AFloorGeneratorBase* CDO = FloorGenerator->GetDefaultObject<AFloorGeneratorBase>();
+			if (!CDO) continue;
+
+			if (CDO->GetThemes().Contains(DungeonTheme))
+			{
+				ThemedFloorGenerators.Add(FloorGenerator);
+			}
+		}
+		
+		bThemedFloorGeneratorsPopulated = true;
+	}
+	
+	if (ThemedFloorGenerators.Num() == 0)
+	{
+		return nullptr;
+	}
+
+	return ThemedFloorGenerators[FMath::RandRange(0, ThemedFloorGenerators.Num() - 1)];	
+}
+
+TSubclassOf<AFloorTile> ADungeonManager::GetRandomFloorTile()
+{
+	if (!bThemedFloorTilesPopulated)
+	{
+		for (TSubclassOf<AFloorTile> Tile : FloorTiles)
+		{
+			if (!Tile) continue;
+
+			//Class Default Object
+			const AFloorTile* CDO = Tile->GetDefaultObject<AFloorTile>();
+			if (!CDO) continue;
+
+			if (CDO->GetThemes().Contains(DungeonTheme))
+			{
+				ThemedFloorTiles.Add(Tile);
+			}
+		}
+		
+		bThemedFloorTilesPopulated = true;
+	}
+	
+	if (ThemedFloorTiles.Num() == 0)
+	{
+		return nullptr;
+	}
+
+	return ThemedFloorTiles[FMath::RandRange(0, ThemedFloorTiles.Num() - 1)];	
+}
+
+TSubclassOf<AWallTile> ADungeonManager::GetRandomWallTile()
+{
+	if (!bThemedWallTilesPopulated)
+	{
+		for (TSubclassOf<AWallTile> Tile : WallTiles)
+		{
+			if (!Tile) continue;
+
+			//Class Default Object
+			const AWallTile* CDO = Tile->GetDefaultObject<AWallTile>();
+			if (!CDO) continue;
+
+			if (CDO->GetThemes().Contains(DungeonTheme))
+			{
+				ThemedWallTiles.Add(Tile);
+			}
+		}
+		bThemedWallTilesPopulated = true;
+	}
+
+	if (ThemedWallTiles.Num() == 0)
+	{
+		return nullptr;
+	}
+
+	return ThemedWallTiles[FMath::RandRange(0, ThemedWallTiles.Num() - 1)];
+}
+
+TSubclassOf<ATreasure> ADungeonManager::GetRandomTreasure()
+{
+	if (!bThemedTreasuresPopulated)
+	{
+		for (TSubclassOf<ATreasure> Treasure : Treasures)
+		{
+			if (!Treasure) continue;
+
+			//Class Default Object
+			const ATreasure* CDO = Treasure->GetDefaultObject<ATreasure>();
+			if (!CDO) continue;
+
+			ThemedTreasures.Add(Treasure);
+		}
+		bThemedTreasuresPopulated = true;
+	}
+
+	if (ThemedTreasures.Num() == 0)
+	{
+		return nullptr;
+	}
+
+	return ThemedTreasures[FMath::RandRange(0, ThemedTreasures.Num() - 1)];
+}
+
+TSubclassOf<ABreakableActor> ADungeonManager::GetRandomBreakable()
+{
+	if (!bThemedBreakablesPopulated)
+	{
+		for (TSubclassOf<ABreakableActor> Breakable : Breakables)
+		{
+			if (!Breakable) continue;
+
+			//Class Default Object
+			const ABreakableActor* CDO = Breakable->GetDefaultObject<ABreakableActor>();
+			if (!CDO) continue;
+
+			if (CDO->GetThemes().Contains(DungeonTheme))
+			{
+				ThemedBreakables.Add(Breakable);
+			}
+		}
+		bThemedBreakablesPopulated = true;
+	}
+	
+	if (ThemedBreakables.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Themedbreakables.num = 0"));
+		return nullptr;
+	}
+
+	return ThemedBreakables[FMath::RandRange(0, ThemedBreakables.Num() - 1)];
+}
+
+TSubclassOf<AEnemy> ADungeonManager::GetRandomEnemy()
+{
+	if (!bThemedEnemiesPopulated)
+	{
+		for (TSubclassOf<AEnemy> Enemy : Enemies)
+		{
+			if (!Enemy) continue;
+
+			//Class Default Object
+			const AEnemy* CDO = Enemy->GetDefaultObject<AEnemy>();
+			if (!CDO) continue;
+
+			if (CDO->GetThemes().Contains(DungeonTheme))
+			{
+				ThemedEnemies.Add(Enemy);
+			}
+		}
+		bThemedEnemiesPopulated = true;
+	}
+	
+	if (ThemedEnemies.Num() == 0)
+	{
+		return nullptr;
+	}
+
+	return ThemedEnemies[FMath::RandRange(0, ThemedEnemies.Num() - 1)];
+}
+
+TSubclassOf<AProp> ADungeonManager::GetRandomProp()
+{
+	if (!bThemedPropsPopulated)
+	{
+		for (TSubclassOf<AProp> Prop : Props)
+		{
+			if (!Prop) continue;
+
+			//Class Default Object
+			const AProp* CDO = Prop->GetDefaultObject<AProp>();
+			if (!CDO) continue;
+
+			if (CDO->GetThemes().Contains(DungeonTheme))
+			{
+				ThemedProps.Add(Prop);
+			}
+		}
+		bThemedPropsPopulated = true;
+	}
+	
+	if (ThemedProps.Num() == 0)
+	{
+		return nullptr;
+	}
+
+	return ThemedProps[FMath::RandRange(0, ThemedProps.Num() - 1)];
+}
+
+void ADungeonManager::AddToEmptyLocationsArray(FVector Location)
+{
+	EmptyLocations.Add(Location);
+}
+
+bool ADungeonManager::GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue)
+{
+	if (!Table) return false;
+
+	static const FString Context(TEXT("QuestAdjectives"));
+	TArray<FQuestAdjectiveRow*> Rows;
+	Table->GetAllRows(Context, Rows);
+
+	if (Rows.Num() == 0) return false;
+
+	//Only collect non-empty values to account for varying column fills
+	TArray<FString> ValidValues;
+
+	for (FQuestAdjectiveRow* Row : Rows)
+	{
+		if (!Row) continue;
+
+		const FString& Value = Row->*Field;
+		if (!Value.IsEmpty())
+		{
+			ValidValues.Add(Value);
+		}
+	}
+
+	if (ValidValues.Num() == 0) return false;
+
+	const int32 Index = FMath::RandRange(0, ValidValues.Num() - 1);
+	OutValue = ValidValues[Index];
+
+	return true;
+}
+
+FText ADungeonManager::GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName,const FString& SelectedThemeName, const FString& SelectedTreasureName)
+{
+	FString GreetingsWord, MustWord, TravelWord, PlaceAdj, CollectWord, AsManyWord, ItemAdjA, ItemAdjB, PossibleWord;
+
+	//Pull from different random rows
+	GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::GreetingsWord, GreetingsWord);
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::MustWord, MustWord);
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::TravelWord, TravelWord);
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::PlaceAdjective, PlaceAdj);
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::CollectWord, CollectWord);
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::AsManyWord, AsManyWord);
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::ItemAdjectiveA, ItemAdjA);
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::ItemAdjectiveB, ItemAdjB);
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::PossibleWord, PossibleWord);
+
+	FString Template = 
+		TEXT("{GreetingsWord}, {PlayerName}! {MustWord} {TravelWord} the {ThemeName} of {PlaceAdj} to {CollectWord} {AsManyWord} {ItemAdjA} {TreasureName}s of {ItemAdjB} {PossibleWord}.");
+
+		Template = Template.Replace(TEXT("{GreetingsWord}"), *GreetingsWord);
+		Template = Template.Replace(TEXT("{PlayerName}"), *PlayerName);
+		Template = Template.Replace(TEXT("{MustWord}"), *MustWord);
+		Template = Template.Replace(TEXT("{TravelWord}"), *TravelWord);
+		Template = Template.Replace(TEXT("{ThemeName}"), *SelectedThemeName);
+		Template = Template.Replace(TEXT("{PlaceAdj}"), *PlaceAdj);
+		Template = Template.Replace(TEXT("{CollectWord}"), *CollectWord);
+		Template = Template.Replace(TEXT("{AsManyWord}"), *AsManyWord);
+		Template = Template.Replace(TEXT("{ItemAdjA}"), *ItemAdjA);
+		Template = Template.Replace(TEXT("{TreasureName}"), *SelectedTreasureName);
+		Template = Template.Replace(TEXT("{ItemAdjB}"), *ItemAdjB);
+		Template = Template.Replace(TEXT("{PossibleWord}"), *PossibleWord);
+
+		return FText::FromString(Template);
 }

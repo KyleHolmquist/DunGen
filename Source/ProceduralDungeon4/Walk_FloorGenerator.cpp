@@ -157,13 +157,13 @@ void AWalk_FloorGenerator::SpawnGeometry()
 			{
 				const FVector Pos = CellWorld + FVector(0.f, 0.f, FloorZ);
 
-				AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(Pos, FRotator::ZeroRotator);
+				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(Pos, FRotator::ZeroRotator);
 				if (!FloorActor) continue;
 
-				FloorActor->SetMobility(EComponentMobility::Movable);
+				FloorActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
 				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-				UStaticMeshComponent* MeshComp = FloorActor->GetStaticMeshComponent();
+				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
 				if(!MeshComp)
 				{
 					FloorActor->Destroy();
@@ -182,13 +182,13 @@ void AWalk_FloorGenerator::SpawnGeometry()
 
 				const FVector Pos = CellWorld + FVector(0.f, 0.f, FloorZ + WallHeight * 0.f);
 
-				AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(Pos, FRotator::ZeroRotator);
+				AWallTile* WallActor = World->SpawnActor<AWallTile>(Pos, FRotator::ZeroRotator);
 				if (!WallActor) continue;
 
-				WallActor->SetMobility(EComponentMobility::Movable);
+				WallActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
 				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-				UStaticMeshComponent* MeshComp = WallActor->GetStaticMeshComponent();
+				UStaticMeshComponent* MeshComp = WallActor->GetItemMesh();
 				if (!MeshComp)
 				{
 					WallActor->Destroy();
@@ -300,7 +300,7 @@ void AWalk_FloorGenerator::CreateDoors(int32 DoorCount)
 		const int32 Index = Rng.RandRange(0, WallSegments.Num() - 1);
 		FDungeonWallSegment Seg = WallSegments[Index];
 
-		AStaticMeshActor* WallActor = Seg.WallActor.Get();
+		AWallTile* WallActor = Seg.WallActor.Get();
 		if (!WallActor)
 		{
 			//Dead pointer, discard and retry

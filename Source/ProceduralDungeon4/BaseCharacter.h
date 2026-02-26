@@ -22,6 +22,12 @@ class PROCEDURALDUNGEON4_API ABaseCharacter : public ACharacter, public IHitInte
 public:
 	ABaseCharacter();
 	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UAttributeComponent* Attributes;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Combat");
+	UAnimMontage* AttackMontage;
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetHit_Implementation(const FVector& ImpactPoint, AActor* Hitter);
@@ -58,9 +64,6 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, Category = "Weapon")
 	AWeapon* EquippedWeapon;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UAttributeComponent* Attributes;
 	
 	UFUNCTION(BlueprintCallable)
 	virtual void SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled);
@@ -103,8 +106,6 @@ private:
 	UParticleSystem* HitParticles;
 
 	/** Animation Montages */
-	UPROPERTY(EditDefaultsOnly, Category = "Combat");
-	UAnimMontage* AttackMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat");
     UAnimMontage *HitReactMontage;

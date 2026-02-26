@@ -54,6 +54,22 @@ void AAirsto::Tick(float DeltaTime)
 		Attributes->RegenStamina(DeltaTime);
 		DunGenOverlay->SetStaminaBarPercent(Attributes->GetStaminaPercent());
 	}
+
+	if (ActionState == EActionState::EAS_Dodging)
+    {
+        //Move the player for the dodge
+        FVector V = GetCharacterMovement()->Velocity;
+        V.X = DodgeDirection.X * DodgeSpeed;
+        V.Y = DodgeDirection.Y * DodgeSpeed;
+        GetCharacterMovement()->Velocity = V;
+
+        //Rotate toward dodge direction
+        const FRotator TargetRot(0.f, DodgeDirection.Rotation().Yaw, 0.f);
+        const FRotator NewRot =
+            FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaTime, 20.f);
+
+        SetActorRotation(NewRot);
+    }
 }
 
 void AAirsto::SetOverlappingItem(AItem* Item)
@@ -124,6 +140,7 @@ void AAirsto::InitializeDunGenOverlay()
 
 void AAirsto::Move(const FInputActionValue& Value)
 {
+
 	if (ActionState != EActionState::EAS_Unoccupied) return;
 
 	const FVector2D MovementVector = Value.Get<FVector2D>();
@@ -266,13 +283,31 @@ void AAirsto::Attack(const FInputActionValue& Value)
 void AAirsto::Dodge(const FInputActionValue& Value)
 {
 	if (IsOccupied() || !HasDodgeStamina()) return;
+
+    DodgeDirection = GetLastMovementInputVector();
+    DodgeDirection.Z = 0.f;
+
+    if (DodgeDirection.IsNearlyZero())
+    {
+        DodgeDirection = GetActorForwardVector();
+        DodgeDirection.Z = 0.f;
+    }
+
+    DodgeDirection.Normalize();
+
+	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
+
     PlayDodgeMontage();
-	ActionState = EActionState::EAS_Dodging;
-	if (Attributes && DunGenOverlay)
-	{
-		Attributes->UseStamina(Attributes->GetDodgeCost());
-		DunGenOverlay->SetStaminaBarPercent(Attributes->GetStaminaPercent());
-	}
+    ActionState = EActionState::EAS_Dodging;
+
+    if (Attributes && DunGenOverlay)
+    {
+        Attributes->UseStamina(Attributes->GetDodgeCost());
+        DunGenOverlay->SetStaminaBarPercent(Attributes->GetStaminaPercent());
+    }
 }
 
 void AAirsto::Interact(const FInputActionValue& Value)
@@ -386,8 +421,25 @@ void AAirsto::AttackEnd()
 void AAirsto::DodgeEnd()
 {
 	Super::DodgeEnd();
+	
+	//Stop dodge motion and just keep Z
+    FVector V = GetCharacterMovement()->Velocity;
+    V.X = 0.f;
+    V.Y = 0.f;
+    GetCharacterMovement()->Velocity = V;
 
-	ActionState = EActionState::EAS_Unoccupied;
+    //Restore friction and braking
+    if (bSavedDodgeFriction)
+    {
+        GetCharacterMovement()->BrakingFrictionFactor = SavedBrakingFrictionFactor;
+        GetCharacterMovement()->GroundFriction = SavedGroundFriction;
+    }
+
+	//Restore the rotation settings
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	bUseControllerRotationYaw = true;
+
+    ActionState = EActionState::EAS_Unoccupied;
 }
 
 void AAirsto::DisableMeshCollision()

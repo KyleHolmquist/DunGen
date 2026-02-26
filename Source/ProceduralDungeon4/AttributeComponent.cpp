@@ -59,3 +59,12 @@ void UAttributeComponent::RegenStamina(float DeltaTime)
 {
 	Stamina = FMath::Clamp(Stamina + StaminaRegenRate * DeltaTime, 0.f, MaxStamina);
 }
+
+void UAttributeComponent::InitHealth(int32 InitialHealth)
+{
+	Health = InitialHealth;
+}
+void UAttributeComponent::InitWisdom(int32 InitialWisdom)
+{
+	Wisdom = InitialWisdom;
+}

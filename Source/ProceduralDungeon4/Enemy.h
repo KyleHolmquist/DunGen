@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/Character.h"
 #include "BaseCharacter.h"
 #include "CharacterTypes.h"
 #include "WeaponTypes.h"
@@ -11,6 +12,28 @@
 
 class UHealthBarComponent;
 class UPawnSensingComponent;
+class ATreasure;
+
+USTRUCT(BlueprintType)
+struct FEnemyConfig
+{
+    GENERATED_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TSubclassOf<AEnemy> EnemyClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Dungeon)
+    float MaxHealth = 100.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Dungeon)
+    float WisdomAmount = 10.f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Dungeon)
+    TSubclassOf<ATreasure> InitTreasureClass;
+
+	//WeaponDamage
+
+};
 
 UCLASS()
 class PROCEDURALDUNGEON4_API AEnemy : public ABaseCharacter
@@ -18,7 +41,13 @@ class PROCEDURALDUNGEON4_API AEnemy : public ABaseCharacter
 	GENERATED_BODY()
 
 public:
+	// Sets default values for this character's properties
 	AEnemy();
+
+    void Initialize(const FEnemyConfig& InConfig);
+	void SetPatrolPoints(AActor* PatrolTarget1, AActor* PatrolTarget2);
+	void SetAttackTimer(float TimerMin, float TimerMax);
+	void StartPatrolling();
 
 	/* <AActor> */
     virtual void Tick(float DeltaTime) override;
@@ -30,6 +59,11 @@ public:
 	virtual void GetHit_Implementation(const FVector &ImpactPoint, AActor* Hitter) override;
 	/** </IHitInterface*/
 
+	void SetMaxHealth(int SelectedMaxHealth);
+	void SetWisdomAmount(int SelectedWisdomAmount);
+	void SetHealthPickupAmount(int SelectedHealthPickupAmount);
+	void SetTreasureClass(TSubclassOf<ATreasure> SelectedTreasureClass);
+
 protected:
 
 	/* <AActor>*/
@@ -38,18 +72,39 @@ protected:
 
     /* <ABaseCharacter>*/
     virtual void Die_Implementation() override;
-    void SpawnWisdom();
     virtual void Attack() override;
     virtual bool CanAttack() override;
     virtual void AttackEnd() override;
 	virtual void HandleDamage(float DamageAmount) override;
 	/* </ABaseCharacter> */
 
+	UFUNCTION(BlueprintCallable)
+    void SpawnWisdom();
+
+	UFUNCTION(BlueprintCallable)
+	void SpawnHealthPickup();
+
+	UFUNCTION(BlueprintCallable)
+	void RagdollCharacter();
+
 	EWeaponType WeaponType;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TSubclassOf<ATreasure> TreasureClass;
+
+	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly
+	// TSubclassOf<AHealthPickup> HealthPickupClass;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	EEnemyState EnemyState = EEnemyState::EES_Patrolling;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Dungeon)
+	TArray<EDungeonTheme> DungeonThemes;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Dungeon)
+	FEnemyConfig EnemyConfig;
+
+	FTimerHandle PatrolStartRetryHandle;
 
 	virtual void SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled) override;
 
@@ -64,7 +119,6 @@ private:
 	void HideHealthBar();
 	void ShowHealthBar();
 	void LoseInterest();
-	void StartPatrolling();
 	bool IsOutsideCombatRadius();
 	bool IsChasing();
 	bool IsOutsideAttackRadius();
@@ -74,8 +128,9 @@ private:
 	AActor* ChoosePatrolTarget();
     void SpawnDefaultWeapon();
 
+	//Callback for OnPawnSeen in PawnSensing Component
 	UFUNCTION()
-	void PawnSeen(APawn* SeenPawn); // Callback foor OnPawnSeen in PawnSensing Component
+	void PawnSeen(APawn* SeenPawn); 
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	float PatrollingSpeed = 125.f;
@@ -151,5 +206,6 @@ private:
 
 public:
 	FORCEINLINE AWeapon* GetEquippedWeapon() { return EquippedWeapon; }
+	FORCEINLINE TArray<EDungeonTheme> GetThemes() const { return DungeonThemes; }
 
 };

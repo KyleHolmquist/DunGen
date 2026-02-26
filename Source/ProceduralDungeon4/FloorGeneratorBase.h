@@ -3,7 +3,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/SceneComponent.h"
+#include "DunGenEnums.h"
+#include "DungeonManager.h"
+#include "WallTile.h"
+#include "FloorTile.h"
 #include "FloorGeneratorBase.generated.h"
+
+class AFloorTile;
+class AWallTile;
 
 USTRUCT(BlueprintType)
 struct FExteriorDoor
@@ -31,15 +38,6 @@ class PROCEDURALDUNGEON4_API AFloorGeneratorBase : public AActor
 
 public:
     AFloorGeneratorBase();
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Floor")
-    int32 MapWidth = 40;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Floor")
-    int32 MapHeight = 40;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Floor")
-    float TileSize = 100.f;
 
     //How many exterior doors this module tries to carve
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Dungeon")
@@ -79,13 +77,61 @@ public:
     UFUNCTION(BlueprintCallable, Category ="Dungeon")
     virtual void GenerateModule();
 
+    void SetMapSize(int SelectedMapWidth, int SelectedMapHeight);
+    void SetFloorTile(TSubclassOf<AFloorTile> SelectedFloorTileClass);
+    void SetWallTile(TSubclassOf<AWallTile> SelectedWallTileClass);
+    void SetDoorTile(TSubclassOf<AWallTile> SelectedWallTileClass);
+
+    void SetDungeonManager(ADungeonManager* OwningDungeonManager);
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Dungeon")
-    bool bGenerateOnBeginPlay = true;
+    bool bGenerateOnBeginPlay = false;
 
     UPROPERTY(BlueprintReadOnly)
     bool bHasFinishedGenerating = false;
 
+    UFUNCTION(BlueprintCallable, Category=Dungeon)
+    virtual bool IsEmpty(int32 X, int32 Y) const;
+    
+
+    void InitMapSize(int32 InWidth, int32 InHeight)
+    {
+        MapWidth = InWidth;
+        MapHeight = InHeight;
+    }
+
+	FORCEINLINE TArray<EDungeonTheme> GetThemes() const { return DungeonThemes; }
+    FORCEINLINE int32 GetMapWidth() const { return MapWidth; }
+    FORCEINLINE int32 GetMapHeight() const { return MapHeight; }
+
 
 protected:
     virtual void BeginPlay() override;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Floor")
+    int32 MapWidth = 40;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Floor")
+    int32 MapHeight = 40;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Floor")
+    float TileSize = 100.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Dungeon)
+	TArray<EDungeonTheme> DungeonThemes;
+
+	//Mesh for the floor
+	UPROPERTY(EditAnywhere, Category = "Room Gen")
+	TSubclassOf<AFloorTile> FloorTileClass;
+
+	//Mesh for the Walls
+	UPROPERTY(EditAnywhere, Category = "Walls")
+	TSubclassOf<AWallTile> WallTileClass;
+
+    //Mesh for the Doors
+	UPROPERTY(EditAnywhere, Category = "Walls")
+	TSubclassOf<AWallTile> DoorTileClass;
+
+	UPROPERTY(VisibleAnywhere, Category=Dungeon)
+	ADungeonManager* DungeonManager;
 };

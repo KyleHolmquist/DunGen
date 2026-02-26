@@ -156,13 +156,12 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 			if (bIsFloor && FloorMesh)
 			{
 				const FVector FloorPos = TileCenter + FVector(0.f, 0.f, FloorZ);
-				AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(FloorPos, FRotator::ZeroRotator);
+				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorPos, FRotator::ZeroRotator);
 				if (!FloorActor) continue;
 
-				FloorActor->SetMobility(EComponentMobility::Movable);
 				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-				UStaticMeshComponent* MeshComp = FloorActor->GetStaticMeshComponent();
+				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
 				if (!MeshComp)
 				{
 					FloorActor->Destroy();
@@ -170,6 +169,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 				}
 				
 				MeshComp->SetStaticMesh(FloorMesh);
+				MeshComp->SetMobility(EComponentMobility::Movable);
 
 				const float FloorScale = TileSize / BaseSize;
 				FloorActor->SetActorScale3D(FVector(FloorScale, FloorScale, 1.f));
@@ -199,20 +199,22 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 					const FVector WallPos = TileCenter + FVector(HalfTile, 0.f, FloorZ + WallHeight * 0.f);
 					const FRotator Rot(0.f, 90.f, 0.f);
 
-					AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, Rot);
+					AWallTile* WallActor = World->SpawnActor<AWallTile>(WallPos, Rot);
 					if (WallActor)
 					{
-						WallActor->SetMobility(EComponentMobility::Movable);
+						
+						UStaticMeshComponent* WallComp = WallActor->GetItemMesh();
+						WallComp->SetMobility(EComponentMobility::Movable);
 						WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-						UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent();
-						if (!WComp)
+						if (!WallComp)
 						{
 							WallActor->Destroy();
 						}
 						else
 						{
-							WComp->SetStaticMesh(WallMesh);
+							WallComp->SetStaticMesh(WallMesh);
+							WallComp->SetMobility(EComponentMobility::Movable);
 
 							const float ScaleX = TileSize      / BaseSize; // length
 							const float ScaleY = WallThickness / BaseSize; // thickness
@@ -237,13 +239,13 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						const FVector WallPos = TileCenter + FVector(-HalfTile, 0.f, FloorZ + WallHeight * 0.f);
 						const FRotator Rot(0.f, 90.f, 0.f);
 
-						AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, Rot);
+						AWallTile* WallActor = World->SpawnActor<AWallTile>(WallPos, Rot);
 						if (WallActor)
 						{
-							WallActor->SetMobility(EComponentMobility::Movable);
+
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-							UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent();
+							UStaticMeshComponent* WComp = WallActor->GetItemMesh();
 							if (!WComp)
 							{
 								WallActor->Destroy();
@@ -251,6 +253,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 							else
 							{
 								WComp->SetStaticMesh(WallMesh);
+								WComp->SetMobility(EComponentMobility::Movable);
 
 								const float ScaleX = TileSize      / BaseSize;
 								const float ScaleY = WallThickness / BaseSize;
@@ -276,13 +279,12 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						const FVector WallPos = TileCenter + FVector(0.f, HalfTile, FloorZ + WallHeight * 0.f);
 						const FRotator Rot(0.f, 0.f, 0.f);
 
-						AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, Rot);
+						AWallTile* WallActor = World->SpawnActor<AWallTile>(WallPos, Rot);
 						if (WallActor)
 						{
-							WallActor->SetMobility(EComponentMobility::Movable);
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-							UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent();
+							UStaticMeshComponent* WComp = WallActor->GetItemMesh();
 							if (!WComp)
 							{
 								WallActor->Destroy();
@@ -290,6 +292,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 							else
 							{
 								WComp->SetStaticMesh(WallMesh);
+								WComp->SetMobility(EComponentMobility::Movable);
 
 								const float ScaleX = TileSize      / BaseSize;
 								const float ScaleY = WallThickness / BaseSize;
@@ -315,13 +318,12 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						const FVector WallPos = TileCenter + FVector(0.f, -HalfTile, FloorZ + WallHeight * 0.f);
 						const FRotator Rot(0.f, 0.f, 0.f);
 
-						AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, Rot);
+						AWallTile* WallActor = World->SpawnActor<AWallTile>(WallPos, Rot);
 						if (WallActor)
 						{
-							WallActor->SetMobility(EComponentMobility::Movable);
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-							UStaticMeshComponent* WComp = WallActor->GetStaticMeshComponent();
+							UStaticMeshComponent* WComp = WallActor->GetItemMesh();
 							if (!WComp)
 							{
 								WallActor->Destroy();
@@ -329,6 +331,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 							else
 							{
 								WComp->SetStaticMesh(WallMesh);
+								WComp->SetMobility(EComponentMobility::Movable);
 
 								const float ScaleX = TileSize      / BaseSize;
 								const float ScaleY = WallThickness / BaseSize;
@@ -382,7 +385,7 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 		const int32 Index = Rng.RandRange(0, WallSegments.Num() - 1);
 		FDungeonWallSegment Seg = WallSegments[Index];
 
-		AStaticMeshActor* WallActor = Seg.WallActor.Get();
+		AWallTile* WallActor = Seg.WallActor.Get();
 		if (!WallActor)
 		{
 			//Dead pointer, discard and retry

@@ -17,6 +17,9 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void RegenStamina(float DeltaTime);
 
+	void InitHealth(int32 InitialHealth);
+	void InitWisdom(int32 InitialWisdom);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -28,6 +31,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Actor Attributes")
 	float MaxHealth;
+
+	UPROPERTY(EditAnywhere, Category = "Actor Attributes")
+	float StartingHealth;
 
 	//Current Stamina
 	UPROPERTY(EditAnywhere, Category = "Actor Attributes")

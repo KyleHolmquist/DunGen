@@ -115,14 +115,25 @@ protected:
 	bool IsOccupied();
 	bool IsUnoccupied();
 
+	//Dodge Movement
+	UPROPERTY(EditAnywhere, Category="Combat")
+	float DodgeSpeed = 900.f;
+
+	FVector DodgeDirection = FVector::ZeroVector;
+
+	float SavedBrakingFrictionFactor = 0.f;
+	float SavedGroundFriction = 0.f;
+	bool bSavedDodgeFriction = false;
+
 private:
 
     void InitializeEnhancedInput();
     void InitializeDunGenOverlay();
     void SetHUDHealth();
 
+	UPROPERTY(VisibleAnywhere)
 	ECharacterState CharacterState = ECharacterState::ECS_Unequipped;
-	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	EActionState ActionState = EActionState::EAS_Unoccupied;
 
 	/* Character Components */

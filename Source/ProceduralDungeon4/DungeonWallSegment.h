@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WallTile.h"
 #include "DungeonWallSegment.generated.h"
 
 class AStaticMeshActor;
@@ -20,7 +21,7 @@ struct PROCEDURALDUNGEON4_API FDungeonWallSegment
 
     // The actual spawned wall actor
     UPROPERTY()
-    TWeakObjectPtr<AStaticMeshActor> WallActor;
+    TWeakObjectPtr<AWallTile> WallActor;
 
     //Grid coordinates of the wall tile
     FIntPoint WallCell = FIntPoint(-1, -1);

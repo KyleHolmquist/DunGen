@@ -80,3 +80,32 @@ FBox AFloorGeneratorBase::GetModuleBoundsWorld(float ZMin, float ZMax) const
 	return Box;
 
 }
+
+bool AFloorGeneratorBase::IsEmpty(int32 X, int32 Y) const
+{
+	return false;
+}
+
+void AFloorGeneratorBase::SetMapSize(int SelectedMapWidth, int SelectedMapHeight)
+{
+	MapWidth = SelectedMapWidth;
+	MapHeight = SelectedMapHeight;
+}
+
+void AFloorGeneratorBase::SetFloorTile(TSubclassOf<AFloorTile> SelectedFloorTileClass)
+{
+	FloorTileClass = SelectedFloorTileClass;
+}
+void AFloorGeneratorBase::SetWallTile(TSubclassOf<AWallTile> SelectedWallTileClass)
+{
+	WallTileClass = SelectedWallTileClass;
+}
+void AFloorGeneratorBase::SetDoorTile(TSubclassOf<AWallTile> SelectedWallTileClass)
+{
+	DoorTileClass = SelectedWallTileClass;
+}
+
+void AFloorGeneratorBase::SetDungeonManager(ADungeonManager* OwningDungeonManager)
+{
+	DungeonManager = OwningDungeonManager;
+}

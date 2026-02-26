@@ -5,6 +5,8 @@
 #include "Engine/World.h"
 #include "Engine/StaticMeshActor.h"
 #include "Components/StaticMeshComponent.h"
+#include "WallTile.h"
+#include "FloorTile.h"
 
 // Sets default values
 ACA_FloorGenerator::ACA_FloorGenerator()
@@ -157,7 +159,7 @@ void ACA_FloorGenerator::SpawnGeometry()
 	UWorld* World = GetWorld();
 	if (!World) return;
 
-	if (!FloorMesh)
+	if (!FloorTileClass)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("CA_FloorGenerator: FloorMesh is null"));
 	}
@@ -174,24 +176,33 @@ void ACA_FloorGenerator::SpawnGeometry()
 			const bool bIsWall = CurrentMap[Index(x, y)];
 
 			//Spawn floor wheere there is no wall
-			if (!bIsWall && FloorMesh)
+			if (!bIsWall && FloorTileClass)
 			{
 				const FVector WorldPos = GetActorLocation() + FVector(x * TileSize, y * TileSize, FloorZ);
-
-				AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(WorldPos, FRotator::ZeroRotator);
+				FActorSpawnParameters Params;
+				Params.Owner = this;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorTileClass, WorldPos, FRotator::ZeroRotator, Params);
 				if (!FloorActor) continue;
 
-				FloorActor->SetMobility(EComponentMobility::Movable);
+				//Add the Floor Actor's location to the empty spaces array
+				if (DungeonManager)
+				{
+					DungeonManager->AddToEmptyLocationsArray(FloorActor->GetActorLocation());
+				}
+				
+
+				FloorActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
 				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-				UStaticMeshComponent* MeshComp = FloorActor->GetStaticMeshComponent();
+				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
 				if (!MeshComp)
 				{
 					FloorActor->Destroy();
 					continue;
 				}
 
-				MeshComp->SetStaticMesh(FloorMesh);
+				//MeshComp->SetStaticMesh(FloorMesh);
 
 				//Center the tile
 				const float ScaleFactor = TileSize / BasePlaneSize;
@@ -199,24 +210,26 @@ void ACA_FloorGenerator::SpawnGeometry()
 			}
 
 			//Spawn wall mesh where there's a wall
-			if (bIsWall && WallMesh)
+			if (bIsWall && WallTileClass)
 			{
 				const FVector WallPos = GetActorLocation() + FVector(x * TileSize, y * TileSize, FloorZ);
-
-				AStaticMeshActor* WallActor = World->SpawnActor<AStaticMeshActor>(WallPos, FRotator::ZeroRotator);
+				FActorSpawnParameters Params;
+				Params.Owner = this;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				AWallTile* WallActor = World->SpawnActor<AWallTile>(WallTileClass, WallPos, FRotator::ZeroRotator, Params);
 				if (!WallActor) continue;
 
-				WallActor->SetMobility(EComponentMobility::Movable);
+				WallActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
 				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-				UStaticMeshComponent* MeshComp = WallActor->GetStaticMeshComponent();
+				UStaticMeshComponent* MeshComp = WallActor->GetItemMesh();
 				if (!MeshComp)
 				{
 					WallActor->Destroy();
 					continue;
 				}
 
-				MeshComp->SetStaticMesh(WallMesh);
+				//MeshComp->SetStaticMesh(WallMesh);
 
 				//Assume WallMesh is 100x100x100 cube, scale to TileSize and WallHeight
 				const float XYScale = TileSize / BasePlaneSize;
@@ -453,7 +466,7 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 		const int32 SegIndex = Rng.RandRange(0, WallSegments.Num() - 1);
 		FDungeonWallSegment Seg = WallSegments[SegIndex];
 
-		AStaticMeshActor* WallActor = Seg.WallActor.Get();
+		AWallTile* WallActor = Seg.WallActor.Get();
 		if (!WallActor)
 		{
 			//Dead pointer, discard and retry
@@ -462,7 +475,8 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 			continue;
 		}
 
-		WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+		//FIX ME
+		//WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 		const FTransform WallTransform = WallActor->GetActorTransform();
 
@@ -515,29 +529,39 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 				}
 
 				//Spawn a floor mesh along the corridor if there is one
-				if (FloorMesh)
+				if (FloorTileClass)
 				{
 					const float BasePlaneSize = 100.f;
 					const float ScaleFactor = TileSize / BasePlaneSize;
 
 					const FVector FloorPos = GetActorLocation() + FVector(CX * TileSize, CY * TileSize, FloorZ);
-
-					AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(FloorPos, FRotator::ZeroRotator);
+					FActorSpawnParameters Params;
+					Params.Owner = this;
+					Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+					AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorTileClass, FloorPos, FRotator::ZeroRotator, Params);
 
 					if (FloorActor)
 					{
-						FloorActor->SetMobility(EComponentMobility::Movable);
+
+						FloorActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
 						FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-						if (UStaticMeshComponent* FloorComp = FloorActor->GetStaticMeshComponent())
+						if (UStaticMeshComponent* FloorComp = FloorActor->GetItemMesh())
 						{
-							FloorComp->SetStaticMesh(FloorMesh);
+							//FloorComp->SetStaticMesh(FloorTile);
 							FloorActor->SetActorScale3D(FVector(ScaleFactor, ScaleFactor, 1.f));
 						}
 						else
 						{
 							FloorActor->Destroy();
 						}
+
+						//Add the Floor Actor's location to the empty spaces array
+						if (DungeonManager)
+						{
+							DungeonManager->AddToEmptyLocationsArray(FloorActor->GetActorLocation());
+						}
+						
 					}
 				}
 
@@ -584,3 +608,22 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 	}
 }
 
+bool ACA_FloorGenerator::IsEmpty(int32 X, int32 Y) const
+{
+    //Check the bounds
+    if (X < 0 || Y < 0 || X >= MapWidth || Y >= MapHeight)
+    {
+        return false;
+    }
+
+    const int32 Idx = Index(X, Y); 
+
+    if (!CurrentMap.IsValidIndex(Idx))
+    {
+        return false;
+    }
+
+    //CurrentMap: true = wall, false = floor
+    //"Empty" means floor space
+    return !CurrentMap[Idx];
+}

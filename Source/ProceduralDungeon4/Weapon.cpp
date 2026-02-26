@@ -61,12 +61,11 @@ void AWeapon::BoxTrace(FHitResult& BoxHit)
 	const FVector End = BoxTraceEnd->GetComponentLocation();
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(this);
-	//ActorsToIgnore.AddUnique(GetOwner());
-
-	// for (AActor* Actor : IgnoreActors)
-	// {
-	// 	ActorsToIgnore.AddUnique(Actor);
-	// }
+	
+	if (AActor* OwnerActor = GetOwner())
+	{
+		ActorsToIgnore.AddUnique(OwnerActor);
+	}
 
 	UKismetSystemLibrary::BoxTraceSingle(
 		this,
@@ -85,7 +84,7 @@ void AWeapon::BoxTrace(FHitResult& BoxHit)
 		FColor::Green,
 		5.f
 		);
-	//IgnoreActors.AddUnique(BoxHit.GetActor());
+	IgnoreActors.AddUnique(BoxHit.GetActor());
 }
 
 void AWeapon::DeactivateEmbers()
@@ -125,13 +124,15 @@ void AWeapon::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 
 void AWeapon::OnBoxOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
 {
-    //if (ActorIsSameType(OtherActor)) return;
+    if (ActorIsSameType(OtherActor)) return;
 
 	FHitResult BoxHit;
 	BoxTrace(BoxHit);
 
 	AActor* MyOwner = GetOwner();
 	if (!MyOwner) return;
+	if (BoxHit.GetActor() == nullptr) return;
+	if (BoxHit.GetActor() == MyOwner) return;
 	
 	if (BoxHit.GetActor())
 	{

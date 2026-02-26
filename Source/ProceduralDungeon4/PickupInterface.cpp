@@ -14,6 +14,11 @@ void IPickupInterface::AddWisdom(AWisdom* Wisdom)
     
 }
 
+void IPickupInterface::AddHealth(AHealthPickup* HealthPickup)
+{
+    
+}
+
 void IPickupInterface::AddGold(ATreasure* Treasure)
 {
 	

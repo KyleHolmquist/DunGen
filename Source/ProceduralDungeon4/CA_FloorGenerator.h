@@ -7,7 +7,6 @@
 #include "DungeonWallSegment.h"
 #include "FloorGeneratorBase.h"
 #include "CA_FloorGenerator.generated.h"
-
 UCLASS()
 class PROCEDURALDUNGEON4_API ACA_FloorGenerator : public AFloorGeneratorBase
 {
@@ -28,6 +27,8 @@ public:
 	
 	UPROPERTY(EditAnywhere, Category = "CA")
 	int32 DeathLimit = 3;
+
+	virtual bool IsEmpty(int32 X, int32 Y) const override;
 
 protected:
 	// Called when the game starts or when spawned
@@ -53,14 +54,6 @@ protected:
 	// //Size of each cell in world units (cm)
 	// UPROPERTY(EditAnywhere, Category = "CA")
 	// float TileSize = 100.f;
-
-	//Mesh used for each floor tile
-	UPROPERTY(EditAnywhere, Category = "CA")
-	UStaticMesh* FloorMesh;
-	
-	//Mesh used for walls
-	UPROPERTY(EditAnywhere, Category = "CA")
-	UStaticMesh* WallMesh;
 	
 	//Height of floor and walls
 	UPROPERTY(EditAnywhere, Category = "CA")
@@ -75,7 +68,7 @@ protected:
 
 	// MapWidth * MapHeight array of wall actors, indexed by cell
     UPROPERTY()
-    TArray<TWeakObjectPtr<AStaticMeshActor>> WallActorMap;
+    TArray<TWeakObjectPtr<AWallTile>> WallActorMap;
 
 	// -- Doors --
 	

@@ -216,13 +216,13 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
         const FVector FloorScale( RoomWorldWidth  / BaseMeshSize, RoomWorldHeight / BaseMeshSize, 1.f);
 
         // -- Floor --
-        AStaticMeshActor* FloorActor = World->SpawnActor<AStaticMeshActor>(FloorLocation, FRotator::ZeroRotator);
+        AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorLocation, FRotator::ZeroRotator);
         if (!FloorActor) continue;
 		
-		FloorActor->SetMobility(EComponentMobility::Movable);
+		FloorActor->GetItemMesh()->SetMobility(EComponentMobility::Movable);
 		FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-        if (UStaticMeshComponent* MeshComp = FloorActor->GetStaticMeshComponent())
+        if (UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh())
         {
             MeshComp->SetStaticMesh(FloorMesh);
             FloorActor->SetActorScale3D(FloorScale);
@@ -240,15 +240,15 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
         const FVector Origin = GetActorLocation();
         const float WallZ = FloorZ + WallHeight * 0.f;
 
-        auto SpawnWallSegment = [&](const FVector& Location, const FRotator& Rot) -> AStaticMeshActor*
+        auto SpawnWallSegment = [&](const FVector& Location, const FRotator& Rot) -> AWallTile*
         {
-            AStaticMeshActor* Segment = World->SpawnActor<AStaticMeshActor>(Location, Rot);
+            AWallTile* Segment = World->SpawnActor<AWallTile>(Location, Rot);
             if (!Segment) return nullptr;
 
-            Segment->SetMobility(EComponentMobility::Movable);
+            Segment->GetItemMesh()->SetMobility(EComponentMobility::Movable);
 			Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-            UStaticMeshComponent* WComp = Segment->GetStaticMeshComponent();
+            UStaticMeshComponent* WComp = Segment->GetItemMesh();
             if (!WComp)
             {
                 Segment->Destroy();
@@ -282,7 +282,7 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
                 const FVector Loc = Origin + FVector(CenterX, BottomY, WallZ);
                 const FRotator Rot(0.f, 0.f, 0.f);
 
-                if (AStaticMeshActor* Segment = SpawnWallSegment(Loc, Rot))
+                if (AWallTile* Segment = SpawnWallSegment(Loc, Rot))
                 {
 					Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
                     
@@ -299,7 +299,7 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
                 const FVector Loc = Origin + FVector(CenterX, TopY, WallZ);
                 const FRotator Rot(0.f, 0.f, 0.f);
 
-                if (AStaticMeshActor* Segment = SpawnWallSegment(Loc, Rot))
+                if (AWallTile* Segment = SpawnWallSegment(Loc, Rot))
                 {
 					Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
                     
@@ -326,7 +326,7 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
                 const FVector Loc = Origin + FVector(LeftX, CenterY, WallZ);
                 const FRotator Rot(0.f, 90.f, 0.f);
 
-                if (AStaticMeshActor* Segment = SpawnWallSegment(Loc, Rot))
+                if (AWallTile* Segment = SpawnWallSegment(Loc, Rot))
                 {
 					Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
@@ -343,7 +343,7 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
                 const FVector Loc = Origin + FVector(RightX, CenterY, WallZ);
                 const FRotator Rot(0.f, 90.f, 0.f);
 
-                if (AStaticMeshActor* Segment = SpawnWallSegment(Loc, Rot))
+                if (AWallTile* Segment = SpawnWallSegment(Loc, Rot))
                 {
 					Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
@@ -398,7 +398,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 		const FDungeonWallSegment& Seg = WallSegments[Index];
 		if (!Seg.WallActor.IsValid()) return false;
 
-		AStaticMeshActor* ThisActor = Seg.WallActor.Get();
+		AWallTile* ThisActor = Seg.WallActor.Get();
 		const FVector ThisLoc = ThisActor->GetActorLocation();
 
 		const bool bThisHorizontal =
@@ -420,7 +420,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 			if (bThisHorizontal == bOtherHorizontal)
 				continue;
 
-			AStaticMeshActor* OtherActor = OtherSeg.WallActor.Get();
+			AWallTile* OtherActor = OtherSeg.WallActor.Get();
 			const FVector OtherLoc = OtherActor->GetActorLocation();
 
 			if (bThisHorizontal)
@@ -530,7 +530,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 			if (!WallSegments.IsValidIndex(Index)) continue;
 
 			FDungeonWallSegment& Seg = WallSegments[Index];
-			AStaticMeshActor* Actor = Seg.WallActor.Get();
+			AWallTile* Actor = Seg.WallActor.Get();
 			if (Actor) Actor->Destroy();
 			Seg.WallActor = nullptr;
 
@@ -553,7 +553,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 
 				if (Other.Cell == NeighborCell && Other.Direction == OppDir)
 				{
-					if (AStaticMeshActor* OtherActor = Other.WallActor.Get())
+					if (AWallTile* OtherActor = Other.WallActor.Get())
 					{
 						OtherActor->Destroy();
 					}

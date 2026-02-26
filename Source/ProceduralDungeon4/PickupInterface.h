@@ -24,5 +24,6 @@ class PROCEDURALDUNGEON4_API IPickupInterface
 public:
 	virtual void SetOverlappingItem(class AItem* Item);
 	virtual void AddWisdom(class AWisdom* Wisdom);
+	virtual void AddHealth(class AHealthPickup* HealthAmount);
 	virtual void AddGold(class ATreasure* Treasure);
 };
