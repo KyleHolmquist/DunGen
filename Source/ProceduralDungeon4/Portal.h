@@ -9,6 +9,7 @@
 class UParticleSystemComponent;
 class USoundBase;
 class UBoxComponent;
+class AAirsto;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API APortal : public AActor
@@ -28,12 +29,15 @@ protected:
 	virtual void OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
 	virtual void OnBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION()
+	void TeleportPlayer(AAirsto* Airsto, FVector Location);
 	
 	void SpawnEntrySound();
 
-	void TeleportPlayer();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Portal)
+	UStaticMeshComponent* PortalMesh;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = Portal)
 	UParticleSystemComponent* PortalEffect;
 	
 	UPROPERTY(VisibleAnywhere)
@@ -43,22 +47,32 @@ protected:
 	UBoxComponent* ExitBox;
 	
 	UPROPERTY(VisibleAnywhere)
+	UBoxComponent* TeleportBox;
+
+	UPROPERTY(EditAnywhere, Category = Portal)
+	APortal* ConnectedPortal;
+	
+	UPROPERTY(VisibleAnywhere, Category = Portal)
 	bool bCanTeleport = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Portal)
+	FVector PortalLocation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Portal)
 	FVector TeleportLocation;
 
 private:
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = Portal)
 	USoundBase* TeleportSound;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = Portal)
 	USoundBase* PortalHumSound;
 
 public:	
 
-	FORCEINLINE FVector GetTeleportLocation() const { return TeleportLocation; }
+	FORCEINLINE FVector GetPortalLocation() { return PortalLocation; }
+	FORCEINLINE FVector GetTeleportLocation() { return TeleportLocation; }
 	void SetTeleportLocation(FVector SelectedTeleportLocation);
 	
 

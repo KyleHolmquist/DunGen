@@ -42,6 +42,12 @@ void ADungeonManager::BeginPlay()
 
 	InitializeDungeonLevelParams();
 	DungeonModule = SpawnDungeonModule();
+	DungeonModule->SetFloorTile(SelectedFloorTileClass);
+	DungeonModule->SetWallTile(SelectedWallTileClass);
+	DungeonModule->GenerateModule();
+	ExteriorDoors = DungeonModule->GetGeneratedDoorLocations();
+	//Spawn a portal at one of the ExteriorDoors
+	EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
 	PopulateDungeon();
 
 	//Start async wait until both modules finish initializing
@@ -174,8 +180,9 @@ AFloorGeneratorBase* ADungeonManager::SpawnModule(TSubclassOf<AFloorGeneratorBas
 	Module->DesiredExteriorDoors = DesiredDoors;
 
 	Module->SetDungeonManager(this);
+	UE_LOG(LogTemp, Warning, TEXT("Finished ModuleSetDungeonManager"));
 
-	Module->GenerateModule();
+	//Module->GenerateModule();
 
 	return Module;
 }
@@ -862,15 +869,13 @@ AFloorGeneratorBase* ADungeonManager::SpawnDungeonModule()
 
 	//Populate DungneonModule variable and Call GenerateModule after the config is set and the actor is finished spawning
 	DungeonModule = FloorGenerator;
-	DungeonModule->GenerateModule();
-	EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
+	//DungeonModule->GenerateModule();
 
 	return DungeonModule;
 }
 
 void ADungeonManager::PopulateDungeon()
 {
-	//AddEmptySpacesToArray();
 	TotalEmptySpaces = EmptyLocations.Num();
 	SetTreasure();
 	SpawnEnemies();
@@ -899,8 +904,6 @@ bool ADungeonManager::TryPopRandomEmptyLocation(FVector& OutLocation)
 
 void ADungeonManager::SpawnBreakables()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Entered spawn breakables"));
-
 	//Check to see if the EmptyLocations array is empty
 	if (EmptyLocations.Num() == 0)
 	{

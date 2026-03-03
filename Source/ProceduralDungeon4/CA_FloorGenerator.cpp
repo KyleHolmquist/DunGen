@@ -159,7 +159,7 @@ void ACA_FloorGenerator::SpawnGeometry()
 
 	if (!FloorTileClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("CA_FloorGenerator: FloorMesh is null"));
+		UE_LOG(LogTemp, Warning, TEXT("CA_FloorGenerator: FloorTileClass is null"));
 	}
 
 	const float BasePlaneSize = 100.f;
@@ -546,6 +546,7 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 						}
 						else
 						{
+							UE_LOG(LogTemp, Warning, TEXT("No Mesh Component!"));
 							FloorActor->Destroy();
 						}
 
@@ -574,20 +575,25 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 		AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
 
 		//Spawn a door mesh
-		if (DoorMesh)
+		if (WallTileClass)
 		{
-			AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+			FActorSpawnParameters Params;
+			Params.Owner = this;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
 
 			if (DoorActor)
 			{
 
-				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
+				if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
 				{
-					DoorComp->SetStaticMesh(DoorMesh);
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
 					
-					DoorActor->SetMobility(EComponentMobility::Movable);
+					DoorComp->SetMobility(EComponentMobility::Movable);
 					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
+					GeneratedDoorLocations.Add(WallTransform.GetLocation());
 				}
 				else
 				{

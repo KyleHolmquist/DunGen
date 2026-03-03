@@ -144,9 +144,9 @@ void ABSP_FloorGenerator::SplitSpace(const FBSPLeaf& Region, int32 Depth)
 
 void ABSP_FloorGenerator::SpawnFloorPlanes()
 {
-    if (!FloorMesh)
+    if (!FloorTileClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator - FloorMesh is null"));
+        UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator - FloorTileClass is null"));
         return;
     }
 
@@ -215,12 +215,20 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
         const FVector FloorScale( RoomWorldWidth  / BaseMeshSize, RoomWorldHeight / BaseMeshSize, 1.f);
 
         // -- Floor --
-        AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorLocation, FRotator::ZeroRotator);
+
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		const FTransform SpawnTransform(FRotator::ZeroRotator, FloorLocation);
+
+		AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorTileClass, SpawnTransform, Params);
+
         if (!FloorActor) continue;
 
         if (UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh())
         {
-            MeshComp->SetStaticMesh(FloorMesh);
+            //MeshComp->SetStaticMesh(FloorMesh);
             FloorActor->SetActorScale3D(FloorScale);
 		
 			MeshComp->SetMobility(EComponentMobility::Movable);
@@ -228,6 +236,7 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
         }
         else
         {
+			UE_LOG(LogTemp, Warning, TEXT("No Mesh Component!"));
             FloorActor->Destroy();
             continue;
         }
@@ -235,7 +244,7 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 		GeneratedEmptyLocations.Add(FloorLocation);
 
         // -- Walls as equal-length segments --
-        if (!WallMesh || WallHeight <= 0.f) continue;
+        if (!WallTileClass || WallHeight <= 0.f) continue;
 
         const float HalfThickness = WallThickness * 0.5f;
         const FVector Origin = GetActorLocation();
@@ -243,7 +252,15 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
         auto SpawnWallSegment = [&](const FVector& Location, const FRotator& Rot) -> AWallTile*
         {
-            AWallTile* Segment = World->SpawnActor<AWallTile>(Location, Rot);
+
+			FActorSpawnParameters Params;
+			Params.Owner = this;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			const FTransform SpawnTransform(Rot, Location);
+
+			AWallTile* Segment = World->SpawnActor<AWallTile>(WallTileClass, SpawnTransform, Params);
+
             if (!Segment) return nullptr;
 
             UStaticMeshComponent* WComp = Segment->GetItemMesh();
@@ -256,7 +273,7 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
             WComp->SetMobility(EComponentMobility::Movable);
 			Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-            WComp->SetStaticMesh(WallMesh);
+            //WComp->SetStaticMesh(WallMesh);
 
             const float SegmentLength = TileSize;
 			//Length
@@ -302,7 +319,6 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
                 if (AWallTile* Segment = SpawnWallSegment(Loc, Rot))
                 {
-					Segment->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
                     
 					FDungeonWallSegment Seg;
                     Seg.Cell      = FIntPoint(TileX, RoomMaxY - 1);
@@ -629,20 +645,27 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
             //Door mesh
             if (DoorMesh)
             {
-                AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(T.GetLocation(), T.GetRotation().Rotator());
+
+				FActorSpawnParameters Params;
+				Params.Owner = this;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+				AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, T.GetLocation(), T.GetRotation().Rotator(), Params);
+
                 if (DoorActor)
                 {
-					DoorActor->SetMobility(EComponentMobility::Movable);
 					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-                    if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
+                    if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
                     {
-                        DoorComp->SetStaticMesh(DoorMesh);
+						DoorComp->SetMobility(EComponentMobility::Movable);
 
 						FVector DoorScale = T.GetScale3D();
 						//Stretch the door mesh to cover all segments
 						DoorScale.X *= DoorSegments;
                         DoorActor->SetActorScale3D(DoorScale);
+
+						GeneratedDoorLocations.Add(T.GetLocation());
 
                     }
                     else
@@ -679,21 +702,28 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 
         if (DoorMesh)
         {
-            AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+
+			FActorSpawnParameters Params;
+			Params.Owner = this;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
+			
             if (DoorActor)
             {
-				DoorActor->SetMobility(EComponentMobility::Movable);
 				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-                if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
+                if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
                 {
-                    DoorComp->SetStaticMesh(DoorMesh);
+					DoorComp->SetMobility(EComponentMobility::Movable);
 
 					FVector DoorScale = WallTransform.GetScale3D();
 					//Stretch the door mesh to cover all segments
 					DoorScale.X *= DoorSegments;
 
 					DoorActor->SetActorScale3D(DoorScale);
+
+					GeneratedDoorLocations.Add(WallTransform.GetLocation());
                     
                 }
                 else

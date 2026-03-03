@@ -22,6 +22,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Procedural Dungeon")
+	UStaticMeshComponent* ItemMesh;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Procedural Dungeon")
 	TArray<EDungeonTheme> DungeonThemes;

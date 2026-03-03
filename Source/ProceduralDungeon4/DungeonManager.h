@@ -17,6 +17,7 @@ class AFloorGeneratorBase;
 struct FExteriorDoor;
 class UDataTable;
 struct FQuestAdjectiveRow;
+class APortalManager;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API ADungeonManager : public AActor
@@ -186,6 +187,9 @@ protected:
 	TArray<FVector> EmptyLocations;
 
 	UPROPERTY(VisibleAnywhere, Category=Dungeon)
+	TArray<FVector> ExteriorDoors;
+
+	UPROPERTY(VisibleAnywhere, Category=Dungeon)
 	TArray<AActor*> SpawnedActors;
 
 	UPROPERTY(VisibleAnywhere, Category=Dungeon)
@@ -210,7 +214,9 @@ protected:
 	void SetEnemyAttackTimer(AEnemy* Enemy);
 	void SetEnemyWeaponDamage(AEnemy* Enemy);
 	void StartPatrollingDelayed();
-	
+
+	UPROPERTY(VisibleAnywhere, Category=Dungeon)
+	APortalManager* PortalManager;	
 
 	// ---- Quest Text ----
 	UPROPERTY(EditDefaultsOnly, Category="Quest Text")

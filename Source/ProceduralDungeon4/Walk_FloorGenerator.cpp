@@ -135,9 +135,9 @@ void AWalk_FloorGenerator::SpawnGeometry()
 	UWorld* World = GetWorld();
 	if(!World) return;
 
-	if (!FloorMesh && !WallMesh)
+	if (!FloorTileClass && !WallTileClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Walk_FloorGenerator: no meshes assigned"));
+		UE_LOG(LogTemp, Warning, TEXT("Walk_FloorGenerator: no tiles assigned"));
 		return;
 	}
 
@@ -152,16 +152,24 @@ void AWalk_FloorGenerator::SpawnGeometry()
 			const FVector CellWorld = GetActorLocation() + FVector(x * TileSize, y * TileSize, 0.f);
 
 			//Floor
-			if (!bIsWall && FloorMesh)
+			if (!bIsWall && FloorTileClass)
 			{
 				const FVector Pos = CellWorld + FVector(0.f, 0.f, FloorZ);
 
-				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(Pos, FRotator::ZeroRotator);
+				FActorSpawnParameters Params;
+				Params.Owner = this;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+				const FTransform SpawnTransform(FRotator::ZeroRotator, Pos);
+
+				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorTileClass, Pos, FRotator::ZeroRotator, Params);
+
 				if (!FloorActor) continue;
 
 				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
 				if(!MeshComp)
 				{
+					UE_LOG(LogTemp, Warning, TEXT("No Mesh Component!"));
 					FloorActor->Destroy();
 					continue;
 				}
@@ -169,20 +177,27 @@ void AWalk_FloorGenerator::SpawnGeometry()
 				MeshComp->SetMobility(EComponentMobility::Movable);
 				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-				MeshComp->SetStaticMesh(FloorMesh);
+				//MeshComp->SetStaticMesh(FloorMesh);
 
 				const float Scale = TileSize / BasePlaneSize;
 				FloorActor->SetActorScale3D(FVector(Scale, Scale, 1.f));
 				GeneratedEmptyLocations.Add(Pos);
 			}
 			//Walls
-			else if (bIsWall && WallMesh)
+			else if (bIsWall && WallTileClass)
 			{
 				if(!HasFloorNeighbor(x, y)) continue;
 
 				const FVector Pos = CellWorld + FVector(0.f, 0.f, FloorZ + WallHeight * 0.f);
 
-				AWallTile* WallActor = World->SpawnActor<AWallTile>(Pos, FRotator::ZeroRotator);
+				FActorSpawnParameters Params;
+				Params.Owner = this;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+				const FTransform SpawnTransform(FRotator::ZeroRotator, Pos);
+
+				AWallTile* WallActor = World->SpawnActor<AWallTile>(WallTileClass, SpawnTransform, Params);
+
 				if (!WallActor) continue;
 
 				UStaticMeshComponent* MeshComp = WallActor->GetItemMesh();
@@ -195,7 +210,7 @@ void AWalk_FloorGenerator::SpawnGeometry()
 				MeshComp->SetMobility(EComponentMobility::Movable);
 				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-				MeshComp->SetStaticMesh(WallMesh);
+				//MeshComp->SetStaticMesh(WallMesh);
 
 				const float XYScale = TileSize / BasePlaneSize;
 				const float ZScale = WallHeight / BasePlaneSize;
@@ -322,20 +337,26 @@ void AWalk_FloorGenerator::CreateDoors(int32 DoorCount)
 		WallActor->Destroy();
 		WallSegments.RemoveAtSwap(Index);
 		//Spawn a door mesh
-		if (DoorMesh)
+		if (WallTileClass)
 		{
-			AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+
+			FActorSpawnParameters Params;
+			Params.Owner = this;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
 
 			if (DoorActor)
 			{
 
-				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
+				if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
 				{
-					DoorComp->SetStaticMesh(DoorMesh);
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
 
-					DoorActor->SetMobility(EComponentMobility::Movable);
+					DoorComp->SetMobility(EComponentMobility::Movable);
 					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
+					GeneratedDoorLocations.Add(WallTransform.GetLocation());
 				}
 				else
 				{

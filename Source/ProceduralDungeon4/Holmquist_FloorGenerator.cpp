@@ -130,9 +130,9 @@ void AHolmquist_FloorGenerator::GenerateRoomLayout()
 
 void AHolmquist_FloorGenerator::SpawnFloorTiles()
 {
-	if (!FloorMesh)
+	if (!FloorTileClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Holmquist_FloorGenerator: FloorMesh not assigned."));
+		UE_LOG(LogTemp, Warning, TEXT("Holmquist_FloorGenerator: FloorTileClass not assigned."));
 		return;
 	}
 
@@ -152,10 +152,18 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 			const FVector TileCenter = (GetActorLocation() + FVector(x * TileSize, y * TileSize, 0.f));
 
 			//---- Floor ----
-			if (bIsFloor && FloorMesh)
+			if (bIsFloor && FloorTileClass)
 			{
 				const FVector FloorPos = TileCenter + FVector(0.f, 0.f, FloorZ);
-				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorPos, FRotator::ZeroRotator);
+
+				FActorSpawnParameters Params;
+				Params.Owner = this;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+				const FTransform SpawnTransform(FRotator::ZeroRotator, FloorPos);
+
+				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorTileClass, SpawnTransform, Params);
+
 				if (!FloorActor) continue;
 
 				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
@@ -163,11 +171,12 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
 				if (!MeshComp)
 				{
+					UE_LOG(LogTemp, Warning, TEXT("No Mesh Component!"));
 					FloorActor->Destroy();
 					continue;
 				}
 				
-				MeshComp->SetStaticMesh(FloorMesh);
+				//MeshComp->SetStaticMesh(FloorMesh);
 				MeshComp->SetMobility(EComponentMobility::Movable);
 
 				const float FloorScale = TileSize / BaseSize;
@@ -177,7 +186,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 			}
 
 			//---- Walls around Floor ----
-			if (!bIsFloor || !WallMesh)
+			if (!bIsFloor || !WallTileClass)
 			{
 				continue;
 			}
@@ -200,12 +209,18 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 					const FVector WallPos = TileCenter + FVector(HalfTile, 0.f, FloorZ + WallHeight * 0.f);
 					const FRotator Rot(0.f, 90.f, 0.f);
 
-					AWallTile* WallActor = World->SpawnActor<AWallTile>(WallPos, Rot);
+					FActorSpawnParameters Params;
+					Params.Owner = this;
+					Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+					const FTransform SpawnTransform(Rot, WallPos);
+
+					AWallTile* WallActor = World->SpawnActor<AWallTile>(WallTileClass, SpawnTransform, Params);
+
 					if (WallActor)
 					{
 						
 						UStaticMeshComponent* WallComp = WallActor->GetItemMesh();
-						WallComp->SetMobility(EComponentMobility::Movable);
 						WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 						if (!WallComp)
@@ -214,7 +229,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						}
 						else
 						{
-							WallComp->SetStaticMesh(WallMesh);
+							//WallComp->SetStaticMesh(WallMesh);
 							WallComp->SetMobility(EComponentMobility::Movable);
 
 							const float ScaleX = TileSize      / BaseSize; // length
@@ -240,7 +255,14 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						const FVector WallPos = TileCenter + FVector(-HalfTile, 0.f, FloorZ + WallHeight * 0.f);
 						const FRotator Rot(0.f, 90.f, 0.f);
 
-						AWallTile* WallActor = World->SpawnActor<AWallTile>(WallPos, Rot);
+						FActorSpawnParameters Params;
+						Params.Owner = this;
+						Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+						const FTransform SpawnTransform(Rot, WallPos);
+
+						AWallTile* WallActor = World->SpawnActor<AWallTile>(WallTileClass, SpawnTransform, Params);
+
 						if (WallActor)
 						{
 
@@ -253,7 +275,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 							}
 							else
 							{
-								WComp->SetStaticMesh(WallMesh);
+								//WComp->SetStaticMesh(WallMesh);
 								WComp->SetMobility(EComponentMobility::Movable);
 
 								const float ScaleX = TileSize      / BaseSize;
@@ -280,7 +302,14 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						const FVector WallPos = TileCenter + FVector(0.f, HalfTile, FloorZ + WallHeight * 0.f);
 						const FRotator Rot(0.f, 0.f, 0.f);
 
-						AWallTile* WallActor = World->SpawnActor<AWallTile>(WallPos, Rot);
+						FActorSpawnParameters Params;
+						Params.Owner = this;
+						Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+						const FTransform SpawnTransform(Rot, WallPos);
+
+						AWallTile* WallActor = World->SpawnActor<AWallTile>(WallTileClass, SpawnTransform, Params);
+
 						if (WallActor)
 						{
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
@@ -292,7 +321,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 							}
 							else
 							{
-								WComp->SetStaticMesh(WallMesh);
+								//WComp->SetStaticMesh(WallMesh);
 								WComp->SetMobility(EComponentMobility::Movable);
 
 								const float ScaleX = TileSize      / BaseSize;
@@ -319,7 +348,14 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						const FVector WallPos = TileCenter + FVector(0.f, -HalfTile, FloorZ + WallHeight * 0.f);
 						const FRotator Rot(0.f, 0.f, 0.f);
 
-						AWallTile* WallActor = World->SpawnActor<AWallTile>(WallPos, Rot);
+						FActorSpawnParameters Params;
+						Params.Owner = this;
+						Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+						const FTransform SpawnTransform(Rot, WallPos);
+
+						AWallTile* WallActor = World->SpawnActor<AWallTile>(WallTileClass, SpawnTransform, Params);
+						
 						if (WallActor)
 						{
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
@@ -331,7 +367,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 							}
 							else
 							{
-								WComp->SetStaticMesh(WallMesh);
+								//WComp->SetStaticMesh(WallMesh);
 								WComp->SetMobility(EComponentMobility::Movable);
 
 								const float ScaleX = TileSize      / BaseSize;
@@ -411,16 +447,21 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 		//Spawn a door mesh
 		if (DoorMesh)
 		{
-			AStaticMeshActor* DoorActor = World->SpawnActor<AStaticMeshActor>(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+
+			FActorSpawnParameters Params;
+			Params.Owner = this;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
 
 			if (DoorActor)
 			{
-				DoorActor->SetMobility(EComponentMobility::Movable);
 				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-				if (UStaticMeshComponent* DoorComp = DoorActor->GetStaticMeshComponent())
+				if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
 				{
-					DoorComp->SetStaticMesh(DoorMesh);const float BaseSize = 100.f;
+					const float BaseSize = 100.f;
+					DoorComp->SetMobility(EComponentMobility::Movable);
 
 					//Match door orientation to wall direction
 					FRotator DoorRot = WallTransform.GetRotation().Rotator();
@@ -442,6 +483,8 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 					Door.Location = DoorActor->GetActorLocation();
 					Door.Rotation = DoorActor->GetActorRotation();
 					ExteriorDoors.Add(Door);
+
+					GeneratedDoorLocations.Add(WallTransform.GetLocation());
 				}
 				else
 				{
