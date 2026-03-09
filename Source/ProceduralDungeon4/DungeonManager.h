@@ -215,15 +215,8 @@ protected:
 	void SetEnemyWeaponDamage(AEnemy* Enemy);
 	void StartPatrollingDelayed();
 
-	UPROPERTY(VisibleAnywhere, Category=Dungeon)
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	APortalManager* PortalManager;	
-
-	// ---- Quest Text ----
-	UPROPERTY(EditDefaultsOnly, Category="Quest Text")
-	UDataTable* QuestAdjectivesTable;
-
-	bool GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue);
-	FText GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName,const FString& SelectedThemeName, const FString& SelectedTreasureName);
 
 private:
 
@@ -257,6 +250,10 @@ public:
 	TSubclassOf<ABreakableActor> GetRandomBreakable();
 	TSubclassOf<AEnemy> GetRandomEnemy();
 	TSubclassOf<AProp> GetRandomProp();
+
+	//Dialogue
+	FString GetSelectedThemeText() const;
+	FString GetSelectedTreasureText() const;
 
 
 };

@@ -18,6 +18,8 @@
 #include "DunGenOverlay.h"
 #include "Wisdom.h"
 #include "Treasure.h"
+#include "DialogueInterface.h"
+#include "DunGenDialogueOverlay.h"
 
 AAirsto::AAirsto()
 {
@@ -125,6 +127,8 @@ void AAirsto::InitializeDunGenOverlay()
         ADunGenHUD *DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
         if (DunGenHUD)
         {
+			UE_LOG(LogTemp, Warning, TEXT("GotDunGenHUD"));
+
             DunGenOverlay = DunGenHUD->GetDunGenOverlay();
             if (DunGenOverlay && Attributes)
             {
@@ -312,7 +316,13 @@ void AAirsto::Dodge(const FInputActionValue& Value)
 
 void AAirsto::Interact(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Interacting!"));
+	if (!DialogueTarget) return;
+
+	IDialogueInterface* Dialogue = Cast<IDialogueInterface>(DialogueTarget);
+	if (Dialogue)
+	{
+		Dialogue->Speak();
+	}
 }
 
 bool AAirsto::HasDodgeStamina()
@@ -503,4 +513,46 @@ void AAirsto::SetHUDHealth()
 void AAirsto::HandleDamage(float DamageAmount)
 {
 	Super::HandleDamage(DamageAmount);
+}
+
+void AAirsto::InitializeDunGenDialogueOverlay()
+{
+    APlayerController *PlayerController = Cast<APlayerController>(GetController());
+    if (PlayerController)
+    {
+        ADunGenHUD *DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
+        if (DunGenHUD)
+        {
+            DunGenDialogueOverlay = DunGenHUD->GetDunGenDialogueOverlay();
+        }
+    }
+}
+
+void AAirsto::ShowDialogue(const FText& SpeakerName, const FText& Text)
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AAirsto::ShowDialogue - PlayerController is null."));
+		return;
+	}
+
+	ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
+	if (!DunGenHUD)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AAirsto::ShowDialogue - DunGenHUD is null."));
+		return;
+	}
+
+	DunGenHUD->ShowDialogueOverlay();
+
+	UDunGenDialogueOverlay* DialogueOverlay = DunGenHUD->GetDunGenDialogueOverlay();
+	if (!DialogueOverlay)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AAirsto::ShowDialogue - DialogueOverlay is null."));
+		return;
+	}
+
+	DialogueOverlay->SetName(SpeakerName.ToString());
+	DialogueOverlay->SetDialogueText(Text.ToString());
 }

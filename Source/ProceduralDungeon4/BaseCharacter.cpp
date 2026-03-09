@@ -7,6 +7,7 @@
 #include "AttributeComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/CapsuleComponent.h"
+#include "DunGenHUD.h"
 
 ABaseCharacter::ABaseCharacter()
 {

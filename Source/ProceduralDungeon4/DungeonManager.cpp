@@ -18,9 +18,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "FloorGeneratorBase.h"
 #include "Components/CapsuleComponent.h"
-#include "MyDialogueTypes.h"
-#include "Engine/DataTable.h"
 #include "Weapon.h"
+#include "PortalManager.h"
 
 // -- Forward declarations --
 static FVector ComputeOutwardFromBounds2D(AFloorGeneratorBase* Module, const FVector& DoorWorld);
@@ -42,11 +41,31 @@ void ADungeonManager::BeginPlay()
 
 	InitializeDungeonLevelParams();
 	DungeonModule = SpawnDungeonModule();
+	if (!DungeonModule)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DungeonManager::BeginPlay - DungeonModule is null."));
+    	return;
+	}
+	
 	DungeonModule->SetFloorTile(SelectedFloorTileClass);
 	DungeonModule->SetWallTile(SelectedWallTileClass);
 	DungeonModule->GenerateModule();
 	ExteriorDoors = DungeonModule->GetGeneratedDoorLocations();
-	//Spawn a portal at one of the ExteriorDoors
+	if (ExteriorDoors.Num() > 0)
+	{
+		int DoorChoice = FMath::RandRange(0, ExteriorDoors.Num() - 1);
+			FVector SelectedDoorLocation = ExteriorDoors[DoorChoice];
+			//Spawn a portal at one of the ExteriorDoors
+			if (PortalManager)
+			{
+				PortalManager->SpawnAwayPortal(SelectedDoorLocation, FRotator::ZeroRotator);
+			}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DungeonManager::BeginPlay - ExteriorDoors is empty."));
+	}
+	
 	EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
 	PopulateDungeon();
 
@@ -132,25 +151,25 @@ void ADungeonManager::BeginPlay()
 		Holmquist-> NumTiles = HolmquistTiles;
 	}
 	*/
-	FString PlayerName = TEXT("Airsto");
-	FString SelectedThemeText = TEXT("Castle");
+	// FString PlayerName = TEXT("Airsto");
+	// FString SelectedThemeText = TEXT("Castle");
 
-	FString SelectedTreasureText;
-	if (SelectedTreasureClass)
-	{
-		const ATreasure* TreasureCDO = SelectedTreasureClass->GetDefaultObject<ATreasure>();
-		if (TreasureCDO)
-		{
-			SelectedTreasureText = TreasureCDO->GetDisplayName();
-		}
-	}
+	// FString SelectedTreasureText;
+	// if (SelectedTreasureClass)
+	// {
+	// 	const ATreasure* TreasureCDO = SelectedTreasureClass->GetDefaultObject<ATreasure>();
+	// 	if (TreasureCDO)
+	// 	{
+	// 		SelectedTreasureText = TreasureCDO->GetDisplayName();
+	// 	}
+	// }
 
-	FText QuestText = GenerateQuestText(QuestAdjectivesTable, PlayerName, SelectedThemeText, SelectedTreasureText);
+	// FText QuestText = GenerateQuestText(QuestAdjectivesTable, PlayerName, SelectedThemeText, SelectedTreasureText);
 
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, QuestText.ToString());
-	}
+	// if (GEngine)
+	// {
+	// 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, QuestText.ToString());
+	// }
 }
 
 // Called every frame
@@ -1163,6 +1182,12 @@ void ADungeonManager::SetEnemyWeaponDamage(AEnemy* Enemy)
 
 EDungeonTheme ADungeonManager::GetRandomDungeonTheme() const
 {
+	if (DungeonThemes.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DungeonManager::GetRandomDungeonTheme - DungeonThemes is empty."));
+        return EDungeonTheme::EDT_Dungeon;
+	}
+
 	return DungeonThemes[FMath::RandRange(0, DungeonThemes.Num() - 1)];	
 }
 
@@ -1362,68 +1387,45 @@ TSubclassOf<AProp> ADungeonManager::GetRandomProp()
 	return ThemedProps[FMath::RandRange(0, ThemedProps.Num() - 1)];
 }
 
-bool ADungeonManager::GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue)
+FString ADungeonManager::GetSelectedThemeText() const
 {
-	if (!Table) return false;
-
-	static const FString Context(TEXT("QuestAdjectives"));
-	TArray<FQuestAdjectiveRow*> Rows;
-	Table->GetAllRows(Context, Rows);
-
-	if (Rows.Num() == 0) return false;
-
-	//Only collect non-empty values to account for varying column fills
-	TArray<FString> ValidValues;
-
-	for (FQuestAdjectiveRow* Row : Rows)
+	switch(DungeonTheme)
 	{
-		if (!Row) continue;
+		case EDungeonTheme::EDT_Castle:
+			return TEXT("Castle");
+		case EDungeonTheme::EDT_Fort:
+			return TEXT("Fort");
+		case EDungeonTheme::EDT_Cave:
+			return TEXT("Cave");
+		case EDungeonTheme::EDT_Dungeon:
+			return TEXT("Dungeon");
+		case EDungeonTheme::EDT_Mansion:
+			return TEXT("Mansion");
+		case EDungeonTheme::EDT_Crypt:
+			return TEXT("Crypt");
+		case EDungeonTheme::EDT_Temple:
+			return TEXT("Temple");
+		case EDungeonTheme::EDT_Ruins:
+			return TEXT("Ruins");
+		case EDungeonTheme::EDT_Palace:
+			return TEXT("Palace");
+		case EDungeonTheme::EDT_City_Streets:
+			return TEXT("City Streets");
+		default:
+			return TEXT("Dungeon");
+	}
+}
 
-		const FString& Value = Row->*Field;
-		if (!Value.IsEmpty())
+FString ADungeonManager::GetSelectedTreasureText() const
+{
+	if (SelectedTreasureClass)
+	{
+		const ATreasure* TreasureCDO = SelectedTreasureClass->GetDefaultObject<ATreasure>();
+		if (TreasureCDO)
 		{
-			ValidValues.Add(Value);
+			return TreasureCDO->GetDisplayName();
 		}
 	}
 
-	if (ValidValues.Num() == 0) return false;
-
-	const int32 Index = FMath::RandRange(0, ValidValues.Num() - 1);
-	OutValue = ValidValues[Index];
-
-	return true;
-}
-
-FText ADungeonManager::GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName,const FString& SelectedThemeName, const FString& SelectedTreasureName)
-{
-	FString GreetingsWord, MustWord, TravelWord, PlaceAdj, CollectWord, AsManyWord, ItemAdjA, ItemAdjB, PossibleWord;
-
-	//Pull from different random rows
-	GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::GreetingsWord, GreetingsWord);
-    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::MustWord, MustWord);
-    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::TravelWord, TravelWord);
-    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::PlaceAdjective, PlaceAdj);
-    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::CollectWord, CollectWord);
-    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::AsManyWord, AsManyWord);
-    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::ItemAdjectiveA, ItemAdjA);
-    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::ItemAdjectiveB, ItemAdjB);
-    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::PossibleWord, PossibleWord);
-
-	FString Template = 
-		TEXT("{GreetingsWord}, {PlayerName}! {MustWord} {TravelWord} the {ThemeName} of {PlaceAdj} to {CollectWord} {AsManyWord} {ItemAdjA} {TreasureName}s of {ItemAdjB} {PossibleWord}.");
-
-		Template = Template.Replace(TEXT("{GreetingsWord}"), *GreetingsWord);
-		Template = Template.Replace(TEXT("{PlayerName}"), *PlayerName);
-		Template = Template.Replace(TEXT("{MustWord}"), *MustWord);
-		Template = Template.Replace(TEXT("{TravelWord}"), *TravelWord);
-		Template = Template.Replace(TEXT("{ThemeName}"), *SelectedThemeName);
-		Template = Template.Replace(TEXT("{PlaceAdj}"), *PlaceAdj);
-		Template = Template.Replace(TEXT("{CollectWord}"), *CollectWord);
-		Template = Template.Replace(TEXT("{AsManyWord}"), *AsManyWord);
-		Template = Template.Replace(TEXT("{ItemAdjA}"), *ItemAdjA);
-		Template = Template.Replace(TEXT("{TreasureName}"), *SelectedTreasureName);
-		Template = Template.Replace(TEXT("{ItemAdjB}"), *ItemAdjB);
-		Template = Template.Replace(TEXT("{PossibleWord}"), *PossibleWord);
-
-		return FText::FromString(Template);
+	return TEXT("Treasure");
 }

@@ -26,7 +26,7 @@ void APortalManager::Tick(float DeltaTime)
 
 }
 
-APortal* APortalManager::SpawnAwayPortal(FVector& Location, FRotator& Rotation)
+APortal* APortalManager::SpawnAwayPortal(FVector Location, FRotator Rotation)
 {
 	UWorld* World = GetWorld();
 
@@ -42,8 +42,14 @@ APortal* APortalManager::SpawnAwayPortal(FVector& Location, FRotator& Rotation)
 
 	if (HomePortal)
 	{
-		HomePortal->SetTeleportLocation(AwayPortal->GetTeleportLocation());
-		AwayPortal->SetTeleportLocation(HomePortal->GetTeleportLocation());
+		const FVector HomeDest = HomePortal->GetTeleportLocation();
+		const FVector AwayDest = AwayPortal->GetTeleportLocation();
+
+		HomePortal->SetTeleportLocation(AwayDest);
+		AwayPortal->SetTeleportLocation(HomeDest);
+
+		HomePortal->SetConnectedPortal(AwayPortal);
+		AwayPortal->SetConnectedPortal(HomePortal);
 	}
 	
 
@@ -52,5 +58,10 @@ APortal* APortalManager::SpawnAwayPortal(FVector& Location, FRotator& Rotation)
 
 void APortalManager::DestroyAwayPortal()
 {
-	AwayPortal->Destroy();
+	if (AwayPortal)
+	{
+		AwayPortal->Destroy();
+		AwayPortal = nullptr;
+	}
+	
 }

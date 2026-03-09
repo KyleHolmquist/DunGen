@@ -11,14 +11,14 @@ enum class ETileType : uint8
 UENUM(BlueprintType)
 enum class EDungeonTheme : uint8
 {
-	EDS_Castle UMETA(DisplayName = "Castle"),
-	EDS_Fort UMETA(DisplayName = "Fort"),
-	EDS_Cave UMETA(DisplayName = "Cave"),
-	EDS_Dungeon UMETA(DisplayName = "Dungeon"),
-	EDS_Mansion UMETA(DisplayName = "Mansion"),
-	EDS_Crypt UMETA(DisplayName = "Crypt"),
-	EDS_Temple UMETA(DisplayName = "Temple"),
-	EDS_Ruins UMETA(DisplayName = "Ruins"),
-	EDS_Palace UMETA(DisplayName = "Palace"),
-	EDS_City_Streets UMETA(DisplayName = "City Streets")
+	EDT_Castle UMETA(DisplayName = "Castle"),
+	EDT_Fort UMETA(DisplayName = "Fort"),
+	EDT_Cave UMETA(DisplayName = "Cave"),
+	EDT_Dungeon UMETA(DisplayName = "Dungeon"),
+	EDT_Mansion UMETA(DisplayName = "Mansion"),
+	EDT_Crypt UMETA(DisplayName = "Crypt"),
+	EDT_Temple UMETA(DisplayName = "Temple"),
+	EDT_Ruins UMETA(DisplayName = "Ruins"),
+	EDT_Palace UMETA(DisplayName = "Palace"),
+	EDT_City_Streets UMETA(DisplayName = "City Streets")
 };

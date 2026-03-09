@@ -36,7 +36,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION()
-	APortal* SpawnAwayPortal(FVector& Location, FRotator& Rotation);
+	APortal* SpawnAwayPortal(FVector Location, FRotator Rotation);
 
 	UFUNCTION()
 	void DestroyAwayPortal();

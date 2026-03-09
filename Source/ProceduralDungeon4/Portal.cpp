@@ -53,20 +53,32 @@ void APortal::Tick(float DeltaTime)
 
 void APortal::OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OverlappedComponent == EntryBox)
+	if (OverlappedComponent != EntryBox) return;
+	if (!bCanTeleport) return;
+
+	AAirsto* Airsto = Cast<AAirsto>(OtherActor);
+	if (!Airsto) return;
+
+	if (TeleportLocation.IsNearlyZero())
 	{
-		if (bCanTeleport)
-		{
-			if (AAirsto* Airsto = Cast<AAirsto>(OtherActor))
-			{
-				TeleportPlayer(Airsto, ConnectedPortal->GetTeleportLocation());
-			}
-		}
+		UE_LOG(LogTemp, Warning, TEXT("Portal '%s' has no TeleportLocation set."), *GetName());
+		return;
 	}
+
+	bCanTeleport = false;
+
+	SpawnEntrySound();
+	TeleportPlayer(Airsto, TeleportLocation);
 }
 
 void APortal::OnBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	if (OverlappedComponent != EntryBox && OverlappedComponent != ExitBox) return;
+
+	if (Cast<AAirsto>(OtherActor))
+	{
+		bCanTeleport = true;
+	}
 	if (OverlappedComponent == ExitBox)
 	{
 		if (AAirsto* Airsto = Cast<AAirsto>(OtherActor))

@@ -74,6 +74,7 @@ public:
 	FORCEINLINE FVector GetPortalLocation() { return PortalLocation; }
 	FORCEINLINE FVector GetTeleportLocation() { return TeleportLocation; }
 	void SetTeleportLocation(FVector SelectedTeleportLocation);
+	void SetConnectedPortal(APortal* InPortal) { ConnectedPortal = InPortal; }
 	
 
 };

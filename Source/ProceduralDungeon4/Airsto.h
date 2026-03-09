@@ -17,6 +17,7 @@ class AItem;
 class AWisdom;
 class ATreasure;
 class UDunGenOverlay;
+class UDunGenDialogueOverlay;
 class UAttributeComponent;
 
 UCLASS()
@@ -33,6 +34,9 @@ public:
 	virtual void SetOverlappingItem(AItem* Item) override;
 	virtual void AddWisdom(AWisdom* Wisdom) override;
 	virtual void AddGold(ATreasure* Treasure) override;
+
+	void ShowInteractButton();
+	void HideInteractButton();
 
 protected:
 	virtual void BeginPlay() override;
@@ -107,9 +111,6 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void HitReactEnd();
 
-	void ShowInteractButton();
-	void HideInteractButton();
-
 	EWeaponType WeaponType;
 
 	bool IsOccupied();
@@ -124,6 +125,13 @@ protected:
 	float SavedBrakingFrictionFactor = 0.f;
 	float SavedGroundFriction = 0.f;
 	bool bSavedDodgeFriction = false;
+
+	//Dialogue
+	UPROPERTY()
+	AActor* DialogueTarget;
+
+	UFUNCTION(BlueprintCallable)
+	void InitializeDunGenDialogueOverlay();
 
 private:
 
@@ -150,13 +158,22 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Montages");
 	UAnimMontage* EquipMontage;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, Category="HUD")
 	UDunGenOverlay* DunGenOverlay;
+
+	UPROPERTY(VisibleAnywhere, Category=HUD)
+	UDunGenDialogueOverlay* DunGenDialogueOverlay;
 
 
 public:
 	FORCEINLINE ECharacterState GetCharacterState() const { return CharacterState; }
 	FORCEINLINE EActionState GetActionState() const { return ActionState; }
 	FORCEINLINE UDunGenOverlay* GetDunGenOverlay() { return DunGenOverlay; }
+	FORCEINLINE UDunGenDialogueOverlay* GetDunGenDialogueOverlay() { return DunGenDialogueOverlay; }
+
+	void SetDialogueTarget(AActor* Target) { DialogueTarget = Target; }
+
+	UFUNCTION(BlueprintCallable)
+	void ShowDialogue(const FText& SpeakerName, const FText& Text);
 
 };
