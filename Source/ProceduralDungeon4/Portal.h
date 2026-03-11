@@ -10,6 +10,7 @@ class UParticleSystemComponent;
 class USoundBase;
 class UBoxComponent;
 class AAirsto;
+class ADungeonManager;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API APortal : public AActor
@@ -55,11 +56,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = Portal)
 	bool bCanTeleport = true;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Portal)
-	FVector PortalLocation;
+	UPROPERTY()
+	bool bTeleportLocationSet = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Portal)
 	FVector TeleportLocation;
+
+	UPROPERTY()
+	ADungeonManager* DungeonManager;
 
 private:
 
@@ -71,8 +75,9 @@ private:
 
 public:	
 
-	FORCEINLINE FVector GetPortalLocation() { return PortalLocation; }
+	FORCEINLINE FVector GetPortalLocation() { return GetActorLocation(); }
 	FORCEINLINE FVector GetTeleportLocation() { return TeleportLocation; }
+	FVector GetTeleportPointLocation() const;
 	void SetTeleportLocation(FVector SelectedTeleportLocation);
 	void SetConnectedPortal(APortal* InPortal) { ConnectedPortal = InPortal; }
 	

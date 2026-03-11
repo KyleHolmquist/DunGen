@@ -452,6 +452,8 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 			Params.Owner = this;
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
+			if (!WallTileClass) continue;
+
 			AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
 
 			if (DoorActor)
@@ -484,7 +486,7 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 					Door.Rotation = DoorActor->GetActorRotation();
 					ExteriorDoors.Add(Door);
 
-					GeneratedDoorLocations.Add(WallTransform.GetLocation());
+					GeneratedDoorActors.Add(DoorActor);
 				}
 				else
 				{

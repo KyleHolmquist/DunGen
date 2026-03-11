@@ -222,6 +222,8 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
 		const FTransform SpawnTransform(FRotator::ZeroRotator, FloorLocation);
 
+		if (!FloorTileClass) continue;
+
 		AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorTileClass, SpawnTransform, Params);
 
         if (!FloorActor) continue;
@@ -258,6 +260,8 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 			const FTransform SpawnTransform(Rot, Location);
+
+			if (!WallTileClass) return nullptr;
 
 			AWallTile* Segment = World->SpawnActor<AWallTile>(WallTileClass, SpawnTransform, Params);
 
@@ -650,6 +654,8 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 				Params.Owner = this;
 				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
+				if (!WallTileClass) continue;
+
 				AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, T.GetLocation(), T.GetRotation().Rotator(), Params);
 
                 if (DoorActor)
@@ -665,7 +671,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 						DoorScale.X *= DoorSegments;
                         DoorActor->SetActorScale3D(DoorScale);
 
-						GeneratedDoorLocations.Add(T.GetLocation());
+						GeneratedDoorActors.Add(DoorActor);
 
                     }
                     else
@@ -707,6 +713,8 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 			Params.Owner = this;
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
+			if (!WallTileClass) continue;
+
 			AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
 			
             if (DoorActor)
@@ -723,7 +731,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 
 					DoorActor->SetActorScale3D(DoorScale);
 
-					GeneratedDoorLocations.Add(WallTransform.GetLocation());
+					GeneratedDoorActors.Add(DoorActor);
                     
                 }
                 else

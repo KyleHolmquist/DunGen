@@ -39,6 +39,9 @@ public:
 	APortal* SpawnAwayPortal(FVector Location, FRotator Rotation);
 
 	UFUNCTION()
+	void SetHomePortalTeleportLocation();
+
+	UFUNCTION()
 	void DestroyAwayPortal();
 
 };

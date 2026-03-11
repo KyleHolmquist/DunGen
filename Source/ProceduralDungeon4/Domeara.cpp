@@ -5,7 +5,7 @@
 #include "Components/SphereComponent.h"
 #include "Airsto.h"
 #include "DunGenHUD.h"
-#include "DungeonManager.h."
+#include "DungeonManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "MyDialogueTypes.h"
 #include "Engine/DataTable.h"
@@ -47,15 +47,11 @@ void ADomeara::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
 
 void ADomeara::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	IDialogueInterface* DialogueInterface = Cast<IDialogueInterface>(OtherActor);
-	if (DialogueInterface)
-	{
-		
-	}
 
     AAirsto* Airsto = Cast<AAirsto>(OtherActor);
     if (Airsto)
     {
+        EndDialogue();
         CurrentPlayer = nullptr;
         Airsto->SetDialogueTarget(nullptr);
         Airsto->HideInteractButton();
@@ -71,23 +67,100 @@ void ADomeara::Speak()
         return;
     }
 
-    if (!DungeonManager)
+    if (!bInDialogue)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Domeara::Speak - DungeonManager is null."));
+        StartDialogue();
+    }
+    else
+    {
+        AdvanceDialogue();
+    }
+
+
+}
+
+void ADomeara::StartDialogue()
+{
+    if (!CurrentPlayer)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Domeara::StartDialogue - CurrentPlayer is null."));
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("Domeara::Speak - QuestAdjectivesTable: %s"), QuestAdjectivesTable ? TEXT("Valid") : TEXT("Null"));
+    BuildDialogueLines();
+
+    if (ActiveDialogueLines.Num() == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Domeara::StartDialogue - No dialogue lines were built."));
+        return;
+    }
+
+    bInDialogue = true;
+    CurrentDialogueIndex = 0;
+    ShowCurrentDialogueLine();
+}
+
+void ADomeara::AdvanceDialogue()
+{
+    if (!bInDialogue) return;
+
+    ++CurrentDialogueIndex;
+
+    if (!ActiveDialogueLines.IsValidIndex(CurrentDialogueIndex))
+    {
+        EndDialogue();
+        return;
+    }
+
+    ShowCurrentDialogueLine();
+}
+
+void ADomeara::EndDialogue()
+{
+    bInDialogue = false;
+    CurrentDialogueIndex = INDEX_NONE;
+    ActiveDialogueLines.Empty();
+
+    if (!CurrentPlayer) return;
+
+    APlayerController* PlayerController = Cast<APlayerController>(CurrentPlayer->GetController());
+    if (!PlayerController) return;
+
+    ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
+    if (!DunGenHUD) return;
+
+    DunGenHUD->HideDialogueOverlay();
+}
+
+void ADomeara::BuildDialogueLines()
+{
+    ActiveDialogueLines.Empty();
 
     const FString PlayerName = TEXT("Airsto");
     const FString SelectedThemeText = DungeonManager->GetSelectedThemeText();
     const FString SelectedTreasureText = DungeonManager->GetSelectedTreasureText();
 
-    UE_LOG(LogTemp, Warning, TEXT("Domeara::Speak - Theme=%s Treasure=%s"),
-        *SelectedThemeText,
-        *SelectedTreasureText);
+    if (!DungeonManager)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Domeara::BuildDialogueLines - DungeonManager is null."));
+        return;
+    }
 
-    const FText DialogueText = GenerateQuestText
+    if (!DungeonManager->HasPlayerEnteredPortal() && bHasGivenQuest)
+    {
+        ActiveDialogueLines.Add
+        (
+            FText::Format
+            (
+                FText::FromString("You must first travel through the portal to the {0} to retrieve the {1}."),
+                FText::FromString(SelectedThemeText),
+                FText::FromString(SelectedTreasureText)
+            )
+        ); 
+        return;
+    }
+
+    const FText QuestLine = GenerateQuestText
     (
         QuestAdjectivesTable,
         PlayerName,
@@ -95,13 +168,30 @@ void ADomeara::Speak()
         SelectedTreasureText
     );
 
+    ActiveDialogueLines.Add(FText::FromString(TEXT("Greetings, Airsto.")));
+    ActiveDialogueLines.Add(QuestLine);
+    bHasGivenQuest = true;
+}
+
+void ADomeara::ShowCurrentDialogueLine()
+{
+    if (!CurrentPlayer)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Domeara::ShowCurrentDialogueLine - CurrentPlayer is null."));
+        return;
+    }
+
+    if (!ActiveDialogueLines.IsValidIndex(CurrentDialogueIndex))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Domeara::ShowCurrentDialogueLine - Invalid dialogue index: %d"), CurrentDialogueIndex);
+        return;
+    }
+
     CurrentPlayer->ShowDialogue
     (
         FText::FromString(TEXT("Domeara")),
-        DialogueText
+        ActiveDialogueLines[CurrentDialogueIndex]
     );
-
-
 }
 
 bool ADomeara::GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue)

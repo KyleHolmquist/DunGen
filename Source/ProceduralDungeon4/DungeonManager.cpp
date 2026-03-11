@@ -36,140 +36,7 @@ void ADungeonManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UWorld* World = GetWorld();
-	if (!World) return;
-
-	InitializeDungeonLevelParams();
-	DungeonModule = SpawnDungeonModule();
-	if (!DungeonModule)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("DungeonManager::BeginPlay - DungeonModule is null."));
-    	return;
-	}
-	
-	DungeonModule->SetFloorTile(SelectedFloorTileClass);
-	DungeonModule->SetWallTile(SelectedWallTileClass);
-	DungeonModule->GenerateModule();
-	ExteriorDoors = DungeonModule->GetGeneratedDoorLocations();
-	if (ExteriorDoors.Num() > 0)
-	{
-		int DoorChoice = FMath::RandRange(0, ExteriorDoors.Num() - 1);
-			FVector SelectedDoorLocation = ExteriorDoors[DoorChoice];
-			//Spawn a portal at one of the ExteriorDoors
-			if (PortalManager)
-			{
-				PortalManager->SpawnAwayPortal(SelectedDoorLocation, FRotator::ZeroRotator);
-			}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("DungeonManager::BeginPlay - ExteriorDoors is empty."));
-	}
-	
-	EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
-	PopulateDungeon();
-
-	//Start async wait until both modules finish initializing
-	FTimerHandle Timer;
-	World->GetTimerManager().SetTimer
-	(
-		Timer,
-		FTimerDelegate::CreateUObject(this, &ADungeonManager::TryConnectModules),
-		0.1f,      // wait 0.1 second
-		false
-	);
-
-	//Old BeginPlay() code
-
-	/*
-	const FTransform FirstLocation(GetActorRotation(), GetActorLocation());
-
-	//Spawn the first module at the manager's location
-	FirstModule = SpawnModule(FirstModuleClass, GetActorLocation(), FirstModuleDoors);
-	if (!FirstModule) return;
-	
-
-
-	
-
-	if (!FirstModuleClass || !SecondModuleClass)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("DungeonManager Module classes not set"));
-		return;
-	}
-	
-	FirstModule = SpawnConfiguredModule(FirstModuleClass, FirstLocation, MapWidth, MapHeight, FirstModuleDoors);
-	if (ABSP_FloorGenerator* BSP = Cast<ABSP_FloorGenerator>(FirstModule))
-	{
-		BSP->MinLeafSize = 8;
-		BSP->MaxDepth = 8;
-	}
-	if (ACA_FloorGenerator* CA = Cast<ACA_FloorGenerator>(FirstModule))
-	{
-		CA->SimulationSteps = 5;
-		CA->BirthLimit = 4;
-		CA->DeathLimit = 3;
-	}
-
-	//Get the first module's bounds to decide where to place module 2
-	//const FBox FirstBounds = FirstModule->GetComponentsBoundingBox(true);
-	const FBox FirstBounds = FirstModule->GetModuleBoundsWorld(0.f, 0.f);
-
-	//Leave MinGapBetweenModules size between the two modules
-	const float Gap = FMath::Max(ModuleSeparation, MinGapBetweenModules);
-
-	UE_LOG(LogTemp, Log, TEXT("FirstBounds Min=%s Max=%s Center=%s Gap=%.1f"),
-		*FirstBounds.Min.ToString(),
-		*FirstBounds.Max.ToString(),
-		*FirstBounds.GetCenter().ToString(),
-		Gap);
-
-	//Simple separation along +X, large enough to not overlap
-	FVector SecondPosition = GetActorLocation();
-	SecondPosition.X = FirstBounds.Max.X + Gap;
-	SecondPosition.Y = FirstModule->GetActorLocation().Y;
-	SecondPosition.Z = GetActorLocation().Z;
-	const FTransform SecondLocation(GetActorRotation(), SecondPosition);
-
-	//Spawmn the second module at the location
-	// SecondModule = SpawnModule(SecondModuleClass, SecondLocation, SecondModuleDoors);
-	// if (!SecondModule) return;
-	SecondModule = SpawnConfiguredModule(SecondModuleClass, SecondLocation, MapWidth, MapHeight, SecondModuleDoors);
-	if (ABSP_FloorGenerator* BSP = Cast<ABSP_FloorGenerator>(SecondModule))
-	{
-		BSP->MinLeafSize = 8;
-		BSP->MaxDepth = 5;
-	}
-	if (ACA_FloorGenerator* CA = Cast<ACA_FloorGenerator>(SecondModule))
-	{
-		CA->SimulationSteps = 5;
-		CA->BirthLimit = 4;
-		CA->DeathLimit = 3;
-	}
-	if (AHolmquist_FloorGenerator* Holmquist = Cast<AHolmquist_FloorGenerator>(SecondModule))
-	{
-		Holmquist-> NumTiles = HolmquistTiles;
-	}
-	*/
-	// FString PlayerName = TEXT("Airsto");
-	// FString SelectedThemeText = TEXT("Castle");
-
-	// FString SelectedTreasureText;
-	// if (SelectedTreasureClass)
-	// {
-	// 	const ATreasure* TreasureCDO = SelectedTreasureClass->GetDefaultObject<ATreasure>();
-	// 	if (TreasureCDO)
-	// 	{
-	// 		SelectedTreasureText = TreasureCDO->GetDisplayName();
-	// 	}
-	// }
-
-	// FText QuestText = GenerateQuestText(QuestAdjectivesTable, PlayerName, SelectedThemeText, SelectedTreasureText);
-
-	// if (GEngine)
-	// {
-	// 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, QuestText.ToString());
-	// }
+	SpawnNewDungeon();
 }
 
 // Called every frame
@@ -1428,4 +1295,162 @@ FString ADungeonManager::GetSelectedTreasureText() const
 	}
 
 	return TEXT("Treasure");
+}
+
+void ADungeonManager::SpawnNewDungeon()
+{
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	if (IsValid(DungeonModule))
+	{
+		DungeonModule->Destroy();
+		DungeonModule = nullptr;
+	}
+
+	InitializeDungeonLevelParams();
+
+	DungeonModule = SpawnDungeonModule();
+	if (!IsValid(DungeonModule))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DungeonManager::BeginPlay - DungeonModule is null."));
+		return;
+	}
+	
+	DungeonModule->SetFloorTile(SelectedFloorTileClass);
+	DungeonModule->SetWallTile(SelectedWallTileClass);
+	DungeonModule->GenerateModule();
+	ExteriorDoors = DungeonModule->GetGeneratedDoorActors();
+	if (ExteriorDoors.Num() > 0)
+	{
+		const int32 DoorChoice = FMath::RandRange(0, ExteriorDoors.Num() - 1);
+		AWallTile* SelectedDoorActor = ExteriorDoors[DoorChoice];
+
+		if (IsValid(SelectedDoorActor))
+		{
+			const FVector SelectedDoorLocation = SelectedDoorActor->GetActorLocation();
+			const FRotator SelectedDoorRotation = SelectedDoorActor->GetActorRotation();
+
+			SelectedDoorActor->Destroy();
+
+			if (PortalManager)
+			{
+				const FVector PortalSpawnLocation = SelectedDoorLocation + FVector(0.f, 0.f, 100.f);
+				PortalManager->SpawnAwayPortal(PortalSpawnLocation, SelectedDoorRotation);
+				PortalManager->SetHomePortalTeleportLocation();
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DungeonManager::BeginPlay - ExteriorDoors is empty."));
+	}
+	
+	EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
+	PopulateDungeon();
+
+	//Start async wait until both modules finish initializing
+	FTimerHandle Timer;
+	World->GetTimerManager().SetTimer
+	(
+		Timer,
+		FTimerDelegate::CreateUObject(this, &ADungeonManager::TryConnectModules),
+		0.1f,      // wait 0.1 second
+		false
+	);
+}
+
+void ADungeonManager::OldSpawn()
+{
+	//Old BeginPlay() DungeonSpawning code
+
+	/*
+	const FTransform FirstLocation(GetActorRotation(), GetActorLocation());
+
+	//Spawn the first module at the manager's location
+	FirstModule = SpawnModule(FirstModuleClass, GetActorLocation(), FirstModuleDoors);
+	if (!FirstModule) return;
+	
+
+
+	
+
+	if (!FirstModuleClass || !SecondModuleClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DungeonManager Module classes not set"));
+		return;
+	}
+	
+	FirstModule = SpawnConfiguredModule(FirstModuleClass, FirstLocation, MapWidth, MapHeight, FirstModuleDoors);
+	if (ABSP_FloorGenerator* BSP = Cast<ABSP_FloorGenerator>(FirstModule))
+	{
+		BSP->MinLeafSize = 8;
+		BSP->MaxDepth = 8;
+	}
+	if (ACA_FloorGenerator* CA = Cast<ACA_FloorGenerator>(FirstModule))
+	{
+		CA->SimulationSteps = 5;
+		CA->BirthLimit = 4;
+		CA->DeathLimit = 3;
+	}
+
+	//Get the first module's bounds to decide where to place module 2
+	//const FBox FirstBounds = FirstModule->GetComponentsBoundingBox(true);
+	const FBox FirstBounds = FirstModule->GetModuleBoundsWorld(0.f, 0.f);
+
+	//Leave MinGapBetweenModules size between the two modules
+	const float Gap = FMath::Max(ModuleSeparation, MinGapBetweenModules);
+
+	UE_LOG(LogTemp, Log, TEXT("FirstBounds Min=%s Max=%s Center=%s Gap=%.1f"),
+		*FirstBounds.Min.ToString(),
+		*FirstBounds.Max.ToString(),
+		*FirstBounds.GetCenter().ToString(),
+		Gap);
+
+	//Simple separation along +X, large enough to not overlap
+	FVector SecondPosition = GetActorLocation();
+	SecondPosition.X = FirstBounds.Max.X + Gap;
+	SecondPosition.Y = FirstModule->GetActorLocation().Y;
+	SecondPosition.Z = GetActorLocation().Z;
+	const FTransform SecondLocation(GetActorRotation(), SecondPosition);
+
+	//Spawmn the second module at the location
+	// SecondModule = SpawnModule(SecondModuleClass, SecondLocation, SecondModuleDoors);
+	// if (!SecondModule) return;
+	SecondModule = SpawnConfiguredModule(SecondModuleClass, SecondLocation, MapWidth, MapHeight, SecondModuleDoors);
+	if (ABSP_FloorGenerator* BSP = Cast<ABSP_FloorGenerator>(SecondModule))
+	{
+		BSP->MinLeafSize = 8;
+		BSP->MaxDepth = 5;
+	}
+	if (ACA_FloorGenerator* CA = Cast<ACA_FloorGenerator>(SecondModule))
+	{
+		CA->SimulationSteps = 5;
+		CA->BirthLimit = 4;
+		CA->DeathLimit = 3;
+	}
+	if (AHolmquist_FloorGenerator* Holmquist = Cast<AHolmquist_FloorGenerator>(SecondModule))
+	{
+		Holmquist-> NumTiles = HolmquistTiles;
+	}
+	*/
+	// FString PlayerName = TEXT("Airsto");
+	// FString SelectedThemeText = TEXT("Castle");
+
+	// FString SelectedTreasureText;
+	// if (SelectedTreasureClass)
+	// {
+	// 	const ATreasure* TreasureCDO = SelectedTreasureClass->GetDefaultObject<ATreasure>();
+	// 	if (TreasureCDO)
+	// 	{
+	// 		SelectedTreasureText = TreasureCDO->GetDisplayName();
+	// 	}
+	// }
+
+	// FText QuestText = GenerateQuestText(QuestAdjectivesTable, PlayerName, SelectedThemeText, SelectedTreasureText);
+
+	// if (GEngine)
+	// {
+	// 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, QuestText.ToString());
+	// }
 }

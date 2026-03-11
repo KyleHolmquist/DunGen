@@ -34,10 +34,25 @@ protected:
 	UPROPERTY()
 	AAirsto* CurrentPlayer;
 
+	UPROPERTY(VisibleAnywhere, Category=Dialogue)
+	bool bInDialogue = false;
+
+	UPROPERTY(VisibleAnywhere, Category=Dialogue)
+	int32 CurrentDialogueIndex = INDEX_NONE;
+
+	UPROPERTY(VisibleAnywhere, Category=Dialogue)
+	TArray<FText> ActiveDialogueLines;
+
 	UFUNCTION()
 	virtual void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
 	virtual void OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	void StartDialogue();
+	void AdvanceDialogue();
+	void EndDialogue();
+	void BuildDialogueLines();
+	void ShowCurrentDialogueLine();
 
 	// ---- Quest Text ----
 	UPROPERTY(EditDefaultsOnly, Category="Quest Text")
@@ -48,5 +63,8 @@ protected:
 
 	bool GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue);
 	FText GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName,const FString& SelectedThemeName, const FString& SelectedTreasureName);
+
+	//Dialogue Bools
+	bool bHasGivenQuest = false;
 	
 };

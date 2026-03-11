@@ -40,20 +40,16 @@ APortal* APortalManager::SpawnAwayPortal(FVector Location, FRotator Rotation)
 
 	AwayPortal = PortalActor;
 
-	if (HomePortal)
+	if (HomePortal && AwayPortal)
 	{
-		const FVector HomeDest = HomePortal->GetTeleportLocation();
-		const FVector AwayDest = AwayPortal->GetTeleportLocation();
-
-		HomePortal->SetTeleportLocation(AwayDest);
-		AwayPortal->SetTeleportLocation(HomeDest);
+		HomePortal->SetTeleportLocation(AwayPortal->GetTeleportPointLocation());
+		AwayPortal->SetTeleportLocation(HomePortal->GetTeleportPointLocation());
 
 		HomePortal->SetConnectedPortal(AwayPortal);
 		AwayPortal->SetConnectedPortal(HomePortal);
 	}
-	
 
-	return PortalActor;
+	return AwayPortal;
 }
 
 void APortalManager::DestroyAwayPortal()
@@ -64,4 +60,12 @@ void APortalManager::DestroyAwayPortal()
 		AwayPortal = nullptr;
 	}
 	
+}
+
+void APortalManager::SetHomePortalTeleportLocation()
+{
+	if (HomePortal && AwayPortal)
+	{
+		HomePortal->SetTeleportLocation(AwayPortal->GetTeleportPointLocation());
+	}
 }

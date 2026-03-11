@@ -593,7 +593,7 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 					DoorComp->SetMobility(EComponentMobility::Movable);
 					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-					GeneratedDoorLocations.Add(WallTransform.GetLocation());
+					GeneratedDoorActors.Add(DoorActor);
 				}
 				else
 				{

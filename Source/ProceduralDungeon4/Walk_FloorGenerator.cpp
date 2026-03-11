@@ -344,24 +344,28 @@ void AWalk_FloorGenerator::CreateDoors(int32 DoorCount)
 			Params.Owner = this;
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-			AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
-
-			if (DoorActor)
+			if (WallTileClass)
 			{
+				AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
 
-				if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
+				if (DoorActor)
 				{
-					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
 
-					DoorComp->SetMobility(EComponentMobility::Movable);
-					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+					if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
+					{
+						DoorActor->SetActorScale3D(WallTransform.GetScale3D());
 
-					GeneratedDoorLocations.Add(WallTransform.GetLocation());
+						DoorComp->SetMobility(EComponentMobility::Movable);
+						DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
+						GeneratedDoorActors.Add(DoorActor);
+					}
+					else
+					{
+						DoorActor->Destroy();
+					}
 				}
-				else
-				{
-					DoorActor->Destroy();
-				}
+
 			}
 		}
 	}

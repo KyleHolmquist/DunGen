@@ -187,7 +187,7 @@ protected:
 	TArray<FVector> EmptyLocations;
 
 	UPROPERTY(VisibleAnywhere, Category=Dungeon)
-	TArray<FVector> ExteriorDoors;
+	TArray<AWallTile*> ExteriorDoors;
 
 	UPROPERTY(VisibleAnywhere, Category=Dungeon)
 	TArray<AActor*> SpawnedActors;
@@ -218,6 +218,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category=Dungeon)
 	APortalManager* PortalManager;	
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Dungeon)
+	bool bPlayerEnteredPortal = false;
+
 private:
 
 	AFloorGeneratorBase* FirstModule = nullptr;
@@ -238,6 +241,8 @@ private:
 	void ConnectModulesWithCorridor(AFloorGeneratorBase* A, AFloorGeneratorBase* B);
 	void TryConnectModules();
 
+	void OldSpawn();
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -254,6 +259,11 @@ public:
 	//Dialogue
 	FString GetSelectedThemeText() const;
 	FString GetSelectedTreasureText() const;
+
+	bool HasPlayerEnteredPortal() const { return bPlayerEnteredPortal; }
+	void SetPlayerEnteredPortal(bool bEntered) { bPlayerEnteredPortal = bEntered; }
+
+	void SpawnNewDungeon();
 
 
 };

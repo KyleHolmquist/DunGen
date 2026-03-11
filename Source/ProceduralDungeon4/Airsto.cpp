@@ -476,7 +476,7 @@ void AAirsto::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &AAirsto::Equip);
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AAirsto::Attack);
 		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &AAirsto::Dodge);
-		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &AAirsto::Interact);
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AAirsto::Interact);
 
 		
 		EnhancedInputComponent->BindAction(LookXAction, ETriggerEvent::Triggered, this, &AAirsto::LookX);

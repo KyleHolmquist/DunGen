@@ -6,6 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Airsto.h"
+#include "DungeonManager.h"
 
 APortal::APortal()
 {
@@ -37,10 +38,13 @@ void APortal::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(TeleportBox)
+	if (!bTeleportLocationSet)
 	{
-		TeleportLocation = TeleportBox->GetComponentLocation();
+		TeleportLocation = GetTeleportPointLocation();
 	}
+	
+
+	DungeonManager = Cast<ADungeonManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADungeonManager::StaticClass()));
 	
 	
 }
@@ -79,13 +83,6 @@ void APortal::OnBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 	{
 		bCanTeleport = true;
 	}
-	if (OverlappedComponent == ExitBox)
-	{
-		if (AAirsto* Airsto = Cast<AAirsto>(OtherActor))
-		{
-			bCanTeleport = true;
-		}
-	}
 }
 	
 void APortal::SpawnEntrySound()
@@ -102,12 +99,35 @@ void APortal::SpawnEntrySound()
 
 void APortal::TeleportPlayer(AAirsto* Airsto, FVector Location)
 {
-	
-	Airsto->SetActorLocation(Location);
+	if (!Airsto) return;
+
+	if (DungeonManager)
+	{
+		DungeonManager->SetPlayerEnteredPortal(true);
+	}
+		
+	if (ConnectedPortal)
+	{
+		ConnectedPortal->bCanTeleport = false;
+	}
+
+	const FVector MoveUp = Location + FVector(0.f, 0.f, 100.f);
+	Airsto->SetActorLocation(MoveUp);
 	
 }
 
 void APortal::SetTeleportLocation(FVector SelectedTeleportLocation)
 {
 	TeleportLocation = SelectedTeleportLocation;
+	bTeleportLocationSet = true;
+}
+
+FVector APortal::GetTeleportPointLocation() const
+{
+	if (TeleportBox)
+	{
+		return TeleportBox->GetComponentLocation();
+	}
+
+	return GetActorLocation() + FVector(0.f, 0.f, 100.f);
 }
