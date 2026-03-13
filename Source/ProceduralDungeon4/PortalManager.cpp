@@ -16,6 +16,12 @@ APortalManager::APortalManager()
 void APortalManager::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HomePortal && AwayPortal)
+	{
+		HomePortal->SetTeleportLocation(AwayPortal->GetTeleportPointLocation());
+		AwayPortal->SetTeleportLocation(HomePortal->GetTeleportPointLocation());
+	}
 	
 }
 
@@ -42,14 +48,13 @@ APortal* APortalManager::SpawnAwayPortal(FVector Location, FRotator Rotation)
 
 	if (HomePortal && AwayPortal)
 	{
-		HomePortal->SetTeleportLocation(AwayPortal->GetTeleportPointLocation());
-		AwayPortal->SetTeleportLocation(HomePortal->GetTeleportPointLocation());
-
 		HomePortal->SetConnectedPortal(AwayPortal);
 		AwayPortal->SetConnectedPortal(HomePortal);
+
+		AwayPortal->SetCanTeleport(false);
 	}
 
-	return AwayPortal;
+	return PortalActor;
 }
 
 void APortalManager::DestroyAwayPortal()

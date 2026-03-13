@@ -187,7 +187,7 @@ protected:
 	TArray<FVector> EmptyLocations;
 
 	UPROPERTY(VisibleAnywhere, Category=Dungeon)
-	TArray<AWallTile*> ExteriorDoors;
+	TArray<AWallTile*> PortalWallCandidates;
 
 	UPROPERTY(VisibleAnywhere, Category=Dungeon)
 	TArray<AActor*> SpawnedActors;
@@ -220,6 +220,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Dungeon)
 	bool bPlayerEnteredPortal = false;
+
+	UPROPERTY(EditAnywhere, Category=Dungeon)
+	float PortalYawOffset = 90.f;
 
 private:
 

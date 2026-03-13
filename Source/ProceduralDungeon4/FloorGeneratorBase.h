@@ -139,9 +139,12 @@ protected:
     TArray<FVector> GeneratedEmptyLocations;
 
     UPROPERTY(VisibleAnywhere)
+    TArray<AWallTile*> GeneratedWallActors;
+
+    UPROPERTY(VisibleAnywhere)
     TArray<AWallTile*> GeneratedDoorActors;
 
 public:
     FORCEINLINE const TArray<FVector>& GetGeneratedEmptyLocations() const { return GeneratedEmptyLocations; }
-    FORCEINLINE const TArray<AWallTile*>& GetGeneratedDoorActors() const { return GeneratedDoorActors; }
+    FORCEINLINE const TArray<AWallTile*>& GetGeneratedWallActors() const { return GeneratedWallActors; }
 };

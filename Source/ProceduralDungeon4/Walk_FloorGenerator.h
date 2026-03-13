@@ -99,4 +99,8 @@ private:
 
 	bool HasFloorNeighbor(int32 X, int32 Y) const;
 
+	bool IsValidPortalCandidate(int32 WallX, int32 WallY) const;
+
+	FRotator GetPortalFacingRotation(int32 WallX, int32 WallY) const;
+
 };

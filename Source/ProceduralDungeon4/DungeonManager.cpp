@@ -20,6 +20,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Weapon.h"
 #include "PortalManager.h"
+#include "Portal.h"
+#include "Components/SceneComponent.h"
 
 // -- Forward declarations --
 static FVector ComputeOutwardFromBounds2D(AFloorGeneratorBase* Module, const FVector& DoorWorld);
@@ -1320,31 +1322,67 @@ void ADungeonManager::SpawnNewDungeon()
 	DungeonModule->SetFloorTile(SelectedFloorTileClass);
 	DungeonModule->SetWallTile(SelectedWallTileClass);
 	DungeonModule->GenerateModule();
-	ExteriorDoors = DungeonModule->GetGeneratedDoorActors();
-	if (ExteriorDoors.Num() > 0)
-	{
-		const int32 DoorChoice = FMath::RandRange(0, ExteriorDoors.Num() - 1);
-		AWallTile* SelectedDoorActor = ExteriorDoors[DoorChoice];
 
-		if (IsValid(SelectedDoorActor))
+	PortalWallCandidates = DungeonModule->GetGeneratedWallActors();
+
+	//Remove dead/null pointers
+	PortalWallCandidates.RemoveAll(
+		[](const AWallTile* WallActor)
 		{
-			const FVector SelectedDoorLocation = SelectedDoorActor->GetActorLocation();
-			const FRotator SelectedDoorRotation = SelectedDoorActor->GetActorRotation();
+			return !IsValid(WallActor);
+		}
+	);
 
-			SelectedDoorActor->Destroy();
+		//Populate empty floor locations
+		EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
 
-			if (PortalManager)
+		if (PortalWallCandidates.Num() > 0)
+		{
+			const int32 WallChoice = FMath::RandRange(0, PortalWallCandidates.Num() - 1);
+			AWallTile* SelectedWallActor = PortalWallCandidates[WallChoice];
+
+			if (IsValid(SelectedWallActor))
 			{
-				const FVector PortalSpawnLocation = SelectedDoorLocation + FVector(0.f, 0.f, 100.f);
-				PortalManager->SpawnAwayPortal(PortalSpawnLocation, SelectedDoorRotation);
-				PortalManager->SetHomePortalTeleportLocation();
+				USceneComponent* PortalSpawnPoint = SelectedWallActor->GetPortalSpawnPoint();
+
+				if (!IsValid(PortalSpawnPoint))
+				{
+					UE_LOG(LogTemp, Warning, TEXT("DungeonManager::SpawnNewDungeon - PortalSpawnPoint is null on selected wall."));
+				}
+				else if (PortalManager)
+				{
+					FVector PortalSpawnLocation = PortalSpawnPoint->GetComponentLocation();
+					FRotator PortalRotation = PortalSpawnPoint->GetComponentRotation();
+
+					// Optional Holmquist override if you still want it
+					if (AHolmquist_FloorGenerator* HolmquistGen = Cast<AHolmquist_FloorGenerator>(DungeonModule))
+					{
+						FRotator HolmquistRotation = PortalRotation;
+						if (HolmquistGen->GetPortalFacingRotation(SelectedWallActor, HolmquistRotation))
+						{
+							PortalRotation = HolmquistRotation;
+						}
+					}
+
+					APortal* AwayPortal = PortalManager->SpawnAwayPortal(PortalSpawnLocation, PortalRotation);
+
+					if (IsValid(AwayPortal))
+					{
+						AwayPortal->AttachToActor(SelectedWallActor, FAttachmentTransformRules::KeepWorldTransform);
+					}
+
+					PortalManager->SetHomePortalTeleportLocation();
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("DungeonManager::SpawnNewDungeon - PortalManager is null."));
+				}
 			}
 		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("DungeonManager::BeginPlay - ExteriorDoors is empty."));
-	}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("DungeonManager::SpawnNewDungeon - PortalWallCandidates is empty."));
+		}
 	
 	EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
 	PopulateDungeon();

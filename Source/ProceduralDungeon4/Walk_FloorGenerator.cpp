@@ -24,12 +24,15 @@ void AWalk_FloorGenerator::BeginPlay()
 void AWalk_FloorGenerator::GenerateModule()
 {
 	GeneratedEmptyLocations.Reset();
+	GeneratedWallActors.Reset();
+	WallSegments.Reset();
+
 	GenerateMap();
 	SpawnGeometry();
 
 	const int32 DoorCount = (DesiredExteriorDoors > 0) ? DesiredExteriorDoors : DefaultDoorCount;
 
-	CreateDoors(DoorCount);
+	//CreateDoors(DoorCount);
 
 	bHasFinishedGenerating = true;
 }
@@ -186,9 +189,9 @@ void AWalk_FloorGenerator::SpawnGeometry()
 			//Walls
 			else if (bIsWall && WallTileClass)
 			{
-				if(!HasFloorNeighbor(x, y)) continue;
+				if (!HasFloorNeighbor(x, y)) continue;
 
-				const FVector Pos = CellWorld + FVector(0.f, 0.f, FloorZ + WallHeight * 0.f);
+				const FVector Pos = CellWorld + FVector(0.f, 0.f, FloorZ);
 
 				FActorSpawnParameters Params;
 				Params.Owner = this;
@@ -210,45 +213,25 @@ void AWalk_FloorGenerator::SpawnGeometry()
 				MeshComp->SetMobility(EComponentMobility::Movable);
 				WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-				//MeshComp->SetStaticMesh(WallMesh);
-
 				const float XYScale = TileSize / BasePlaneSize;
 				const float ZScale = WallHeight / BasePlaneSize;
 				WallActor->SetActorScale3D(FVector(XYScale, XYScale, ZScale));
-				
-				//Check how many neighbors the floor cell has, to determine if it's an outer wall cell or not
-				int32 FloorNeighbors = 0;
-				FIntPoint InteriorFloorCell(-1, -1);
 
-				if (x + 1 < MapWidth  && !Map[Index(x + 1, y)])
+				if (IsValidPortalCandidate(x, y))
 				{
-					++FloorNeighbors;
-					InteriorFloorCell = FIntPoint(x + 1, y);
-				}
-				if (x - 1 >= 0        && !Map[Index(x - 1, y)])
-				{
-					++FloorNeighbors;
-					InteriorFloorCell = FIntPoint(x - 1, y);
-				}
-				if (y + 1 < MapHeight && !Map[Index(x, y + 1)])
-				{
-					++FloorNeighbors;
-					InteriorFloorCell = FIntPoint(x, y + 1);
-				}
-				if (y - 1 >= 0        && !Map[Index(x, y - 1)])
-				{
-					++FloorNeighbors;
-					InteriorFloorCell = FIntPoint(x, y - 1);
-				}
+					const FRotator PortalFacingRotation = GetPortalFacingRotation(x, y);
+					WallActor->SetActorRotation(PortalFacingRotation + FRotator(0.f, 180.f, 0.f));
 
-				//Outer walls only have 1 neighbor
-				if (FloorNeighbors == 1)
-				{
 					FDungeonWallSegment Seg;
 					Seg.Cell = FIntPoint(x, y);
 					Seg.Direction = 0;
 					Seg.WallActor = WallActor;
 					WallSegments.Add(Seg);
+
+					GeneratedWallActors.Add(WallActor);
+
+					UE_LOG(LogTemp, Warning, TEXT("PortalCandidate (%d,%d) Rot=%s"),
+						x, y, *WallActor->GetActorRotation().ToString());
 				}
 				
 			}
@@ -369,4 +352,133 @@ void AWalk_FloorGenerator::CreateDoors(int32 DoorCount)
 			}
 		}
 	}
+}
+
+bool AWalk_FloorGenerator::IsValidPortalCandidate(int32 WallX, int32 WallY) const
+{
+	if (WallX < 0 || WallX >= MapWidth || WallY < 0 || WallY >= MapHeight)
+	{
+		return false;
+	}
+
+	//Must be a wall
+	if (!Map.IsValidIndex(Index(WallX, WallY)) || !Map[Index(WallX, WallY)])
+	{
+		return false;
+	}
+
+	int32 FloorNeighbors = 0;
+	FIntPoint InteriorFloorCell(-1, -1);
+
+	const int32 DX[4] = { 1, -1, 0, 0 };
+	const int32 DY[4] = { 0, 0, 1, -1 };
+
+	for (int32 i = 0; i < 4; ++i)
+	{
+		const int32 NX = WallX + DX[i];
+		const int32 NY = WallY + DY[i];
+
+		if (NX < 0 || NX >= MapWidth || NY < 0 || NY >= MapHeight)
+		{
+			continue;
+		}
+
+		// false = floor
+		if (!Map[Index(NX, NY)])
+		{
+			++FloorNeighbors;
+			InteriorFloorCell = FIntPoint(NX, NY);
+		}
+	}
+
+	//Only outer walls should have exactly one floor neighbor
+	if (FloorNeighbors != 1)
+	{
+		return false;
+	}
+
+	//March outward from the interior floor through this wall toward the edge.
+	//If another floor is hit before the boundary, this is not a clean portal candidate.
+	const int32 DirX = WallX - InteriorFloorCell.X;
+	const int32 DirY = WallY - InteriorFloorCell.Y;
+
+	if ((DirX == 0 && DirY == 0) || (DirX != 0 && DirY != 0))
+	{
+		return false;
+	}
+
+	int32 CX = WallX;
+	int32 CY = WallY;
+
+	while (CX >= 0 && CX < MapWidth && CY >= 0 && CY < MapHeight)
+	{
+		if (!Map[Index(CX, CY)])
+		{
+			return false;
+		}
+
+		if (CX == 0 || CX == MapWidth - 1 || CY == 0 || CY == MapHeight - 1)
+		{
+			return true;
+		}
+
+		CX += DirX;
+		CY += DirY;
+	}
+
+	return false;
+}
+
+FRotator AWalk_FloorGenerator::GetPortalFacingRotation(int32 WallX, int32 WallY) const
+{
+	FIntPoint InteriorFloorCell(-1, -1);
+
+	const int32 DX[4] = { 1, -1, 0, 0 };
+	const int32 DY[4] = { 0, 0, 1, -1 };
+
+	for (int32 i = 0; i < 4; ++i)
+	{
+		const int32 NX = WallX + DX[i];
+		const int32 NY = WallY + DY[i];
+
+		if (NX < 0 || NX >= MapWidth || NY < 0 || NY >= MapHeight)
+		{
+			continue;
+		}
+
+		//false = floor
+		if (!Map[Index(NX, NY)])
+		{
+			InteriorFloorCell = FIntPoint(NX, NY);
+			break;
+		}
+	}
+
+	if (InteriorFloorCell.X == -1)
+	{
+		return FRotator::ZeroRotator;
+	}
+
+	//Outward direction = from interior floor cell to wall cell
+	const int32 DirX = WallX - InteriorFloorCell.X;
+	const int32 DirY = WallY - InteriorFloorCell.Y;
+
+	if (DirX == 1 && DirY == 0)
+	{
+		return FRotator(0.f, 0.f, 0.f);
+	}
+	if (DirX == -1 && DirY == 0)
+	{
+		return FRotator(0.f, 180.f, 0.f);
+	}
+	if (DirX == 0 && DirY == 1)
+	{
+		return FRotator(0.f, 90.f, 0.f);
+	}
+	if (DirX == 0 && DirY == -1)
+	{
+		return FRotator(0.f, -90.f, 0.f);
+	}
+
+	return FRotator::ZeroRotator;
 }

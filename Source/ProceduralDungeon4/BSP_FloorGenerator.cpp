@@ -267,6 +267,8 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
             if (!Segment) return nullptr;
 
+			//GeneratedWallActors.Add(Segment);
+
             UStaticMeshComponent* WComp = Segment->GetItemMesh();
             if (!WComp)
             {
@@ -437,7 +439,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 			const bool bOtherHorizontal =
 				(OtherSeg.Direction == EWallDir::Bottom || OtherSeg.Direction == EWallDir::Top);
 
-			// Only care about perpendicular walls
+			//Only care about perpendicular walls
 			if (bThisHorizontal == bOtherHorizontal)
 				continue;
 
@@ -446,7 +448,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 
 			if (bThisHorizontal)
 			{
-				// This is horizontal (extends along X), other is vertical (along Y)
+				//Horizontal extends along X, other is vertical along Y
 				const bool bXOverlap =
 					OtherLoc.X >= ThisLoc.X - HalfLen && OtherLoc.X <= ThisLoc.X + HalfLen;
 				const bool bYOverlap =
@@ -457,7 +459,7 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 			}
 			else
 			{
-				// This is vertical, other is horizontal
+				//This is vertical, other is horizontal
 				const bool bXOverlap =
 					ThisLoc.X >= OtherLoc.X - HalfLen && ThisLoc.X <= OtherLoc.X + HalfLen;
 				const bool bYOverlap =
@@ -681,68 +683,110 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
                 }
             }
         }
-    }
+
+	    // -- Choose one portal location from exterior wall candidates --
+		TArray<int32> PortalCandidates;
+
+		for (int32 SegIndex : ExteriorWalls)
+		{
+			if (!WallSegments.IsValidIndex(SegIndex)) continue;
+
+			FDungeonWallSegment& Seg = WallSegments[SegIndex];
+			if (!Seg.WallActor.IsValid()) continue;
+
+			PortalCandidates.Add(SegIndex);
+		}
+
+		if (PortalCandidates.Num() == 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: No valid exterior wall candidates found for portal."));
+			return;
+		}
+
+		const int32 PickIdx = Rng.RandRange(0, PortalCandidates.Num() - 1);
+		const int32 ChosenSegIndex = PortalCandidates[PickIdx];
+
+		if (!WallSegments.IsValidIndex(ChosenSegIndex)) return;
+
+		FDungeonWallSegment& ChosenSeg = WallSegments[ChosenSegIndex];
+		if (!ChosenSeg.WallActor.IsValid()) return;
+
+		AWallTile* ChosenWallActor = ChosenSeg.WallActor.Get();
+		if (!ChosenWallActor) return;
+
+		GeneratedWallActors.Add(ChosenWallActor);
+
+		const FTransform PortalTransform = ChosenWallActor->GetActorTransform();
+
+		// Record the portal location for DungeonManager
+		AddExteriorDoorWorld(PortalTransform.GetLocation(), PortalTransform.GetRotation().Rotator());
+
+		// Remove this single wall tile so the portal can occupy the space
+		//ChosenWallActor->Destroy();
+		ChosenSeg.WallActor = nullptr;
+	}
 
     // -- Exterior doors --
-    ExteriorDoorCount = FMath::Min(ExteriorDoorCount, ExteriorWalls.Num());
+    //ExteriorDoorCount = FMath::Min(ExteriorDoorCount, ExteriorWalls.Num());
+	// ExteriorDoorCount = 0;
 
-    for (int32 d = 0; d < ExteriorDoorCount && ExteriorWalls.Num() > 0; ++d)
-    {
-        const int32 PickIdx  = Rng.RandRange(0, ExteriorWalls.Num() - 1);
-        const int32 SegIndex = ExteriorWalls[PickIdx];
-        ExteriorWalls.RemoveAtSwap(PickIdx);
+    // for (int32 d = 0; d < ExteriorDoorCount && ExteriorWalls.Num() > 0; ++d)
+    // {
+    //     const int32 PickIdx  = Rng.RandRange(0, ExteriorWalls.Num() - 1);
+    //     const int32 SegIndex = ExteriorWalls[PickIdx];
+    //     ExteriorWalls.RemoveAtSwap(PickIdx);
 
-        if (!WallSegments.IsValidIndex(SegIndex)) continue;
-        FDungeonWallSegment& Seg = WallSegments[SegIndex];
-        if (!Seg.WallActor.IsValid()) continue;
+    //     if (!WallSegments.IsValidIndex(SegIndex)) continue;
+    //     FDungeonWallSegment& Seg = WallSegments[SegIndex];
+    //     if (!Seg.WallActor.IsValid()) continue;
 
-        const FTransform WallTransform = Seg.WallActor->GetActorTransform();
-        DestroySegmentAndOpposite(SegIndex);
+    //     const FTransform WallTransform = Seg.WallActor->GetActorTransform();
+    //     DestroySegmentAndOpposite(SegIndex);
 
-		//Record the door so DungeonManager can use it
-		// FExteriorDoor DoorInfo;
-		// DoorInfo.Location = T.GetLocation();
-		// DoorInfo.Rotation = T.GetRotation().Rotator();
-		// ExteriorDoors.Add(DoorInfo);
-		AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+	// 	//Record the door so DungeonManager can use it
+	// 	// FExteriorDoor DoorInfo;
+	// 	// DoorInfo.Location = T.GetLocation();
+	// 	// DoorInfo.Rotation = T.GetRotation().Rotator();
+	// 	// ExteriorDoors.Add(DoorInfo);
+	// 	//AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
 
-        if (DoorMesh)
-        {
+    //     // if (DoorMesh)
+    //     // {
 
-			FActorSpawnParameters Params;
-			Params.Owner = this;
-			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	// 	// 	FActorSpawnParameters Params;
+	// 	// 	Params.Owner = this;
+	// 	// 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-			if (!WallTileClass) continue;
+	// 	// 	if (!WallTileClass) continue;
 
-			AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
+	// 	// 	AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
 			
-            if (DoorActor)
-            {
-				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+    //     //     if (DoorActor)
+    //     //     {
+	// 	// 		DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-                if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
-                {
-					DoorComp->SetMobility(EComponentMobility::Movable);
+    //     //         if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
+    //     //         {
+	// 	// 			DoorComp->SetMobility(EComponentMobility::Movable);
 
-					FVector DoorScale = WallTransform.GetScale3D();
-					//Stretch the door mesh to cover all segments
-					DoorScale.X *= DoorSegments;
+	// 	// 			FVector DoorScale = WallTransform.GetScale3D();
+	// 	// 			//Stretch the door mesh to cover all segments
+	// 	// 			DoorScale.X *= DoorSegments;
 
-					DoorActor->SetActorScale3D(DoorScale);
+	// 	// 			DoorActor->SetActorScale3D(DoorScale);
 
-					GeneratedDoorActors.Add(DoorActor);
+	// 	// 			GeneratedDoorActors.Add(DoorActor);
                     
-                }
-                else
-                {
-                    DoorActor->Destroy();
-                }
-            }
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             DoorActor->Destroy();
+    //     //         }
+    //     //     }
 
-			UE_LOG(LogTemp, Warning, TEXT(" created %d exterior doors"), ExteriorDoors.Num());
-        }
-    }
+	// 	// 	UE_LOG(LogTemp, Warning, TEXT(" created %d exterior doors"), ExteriorDoors.Num());
+    //     // }
+    // }
 }
 
 // Called every frame

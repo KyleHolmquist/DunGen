@@ -109,6 +109,10 @@ private:
 
 	//Spawn the doors
 	void CreateDoors(int32 DoorCount);
+
+	bool IsValidPortalCandidate(int32 WallX, int32 WallY, FIntPoint& OutInteriorFloorCell) const;
+
+	FRotator GetPortalFacingRotation(int32 WallX, int32 WAllY, const FIntPoint& InteriorFloorCell) const;
 	
 
 public:	

@@ -23,13 +23,15 @@ void AHolmquist_FloorGenerator::BeginPlay()
 void AHolmquist_FloorGenerator::GenerateModule()
 {
 	GeneratedEmptyLocations.Reset();
+	GeneratedWallActors.Reset();
+	WallSegments.Reset();
 	//Allocate Grid
 	GenerateRoomLayout();
 	SpawnFloorTiles();
 
 	const int32 DoorCount = (DesiredExteriorDoors > 0) ? DesiredExteriorDoors : DefaultDoorCount;
 
-	CreateDoors(DoorCount);
+	//CreateDoors(DoorCount);
 
 	bHasFinishedGenerating = true;
 }
@@ -219,7 +221,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 
 					if (WallActor)
 					{
-						
+						GeneratedWallActors.Add(WallActor);
 						UStaticMeshComponent* WallComp = WallActor->GetItemMesh();
 						WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
@@ -268,6 +270,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
+							GeneratedWallActors.Add(WallActor);
 							UStaticMeshComponent* WComp = WallActor->GetItemMesh();
 							if (!WComp)
 							{
@@ -314,6 +317,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						{
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
+							GeneratedWallActors.Add(WallActor);
 							UStaticMeshComponent* WComp = WallActor->GetItemMesh();
 							if (!WComp)
 							{
@@ -359,7 +363,8 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						if (WallActor)
 						{
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
+							
+							GeneratedWallActors.Add(WallActor);
 							UStaticMeshComponent* WComp = WallActor->GetItemMesh();
 							if (!WComp)
 							{
@@ -495,6 +500,50 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 			}
 		}
 	}
+}
+
+bool AHolmquist_FloorGenerator::GetPortalFacingRotation(const AWallTile* InWallActor, FRotator& OutRotation) const
+{
+	if (!InWallActor)
+	{
+		return false;
+	}
+
+	for (const FDungeonWallSegment& Seg : WallSegments)
+	{
+		if (Seg.WallActor.Get() != InWallActor)
+		{
+			continue;
+		}
+
+		switch (Seg.Direction)
+		{
+			//East wall: dungeon interior is to the west (-X)
+			case 0:
+				OutRotation = FRotator(0.f, 180.f, 0.f);
+				return true;
+
+			//West wall: dungeon interior is to the east (+X)
+			case 1:
+				OutRotation = FRotator(0.f, 0.f, 0.f);
+				return true;
+
+			//North wall: dungeon interior is to the south (-Y)
+			case 2:
+				OutRotation = FRotator(0.f, -90.f, 0.f);
+				return true;
+
+			//South wall: dungeon interior is to the north (+Y)
+			case 3:
+				OutRotation = FRotator(0.f, 90.f, 0.f);
+				return true;
+
+			default:
+				return false;
+		}
+	}
+
+	return false;
 }
 
 //Do a dice-roll style walk where a NWSE direction is chosen by rand 1-4

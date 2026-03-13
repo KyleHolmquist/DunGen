@@ -11,6 +11,7 @@ class USoundBase;
 class UBoxComponent;
 class AAirsto;
 class ADungeonManager;
+class UArrowComponent;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API APortal : public AActor
@@ -31,7 +32,7 @@ protected:
 	UFUNCTION()
 	virtual void OnBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	UFUNCTION()
-	void TeleportPlayer(AAirsto* Airsto, FVector Location);
+	void TeleportPlayer(AAirsto* Airsto);
 	
 	void SpawnEntrySound();
 
@@ -50,10 +51,13 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	UBoxComponent* TeleportBox;
 
+	UPROPERTY(VisibleAnywhere, Category=Portal)
+	UArrowComponent* ExitDirectionArrow;
+
 	UPROPERTY(EditAnywhere, Category = Portal)
 	APortal* ConnectedPortal;
 	
-	UPROPERTY(VisibleAnywhere, Category = Portal)
+	UPROPERTY(EditAnywhere, Category = Portal)
 	bool bCanTeleport = true;
 
 	UPROPERTY()
@@ -80,6 +84,10 @@ public:
 	FVector GetTeleportPointLocation() const;
 	void SetTeleportLocation(FVector SelectedTeleportLocation);
 	void SetConnectedPortal(APortal* InPortal) { ConnectedPortal = InPortal; }
+	void SetCanTeleport(bool State);
+	FVector GetPortalForwardVector() const;
+	FVector GetExitDirection() const;
+
 	
 
 };

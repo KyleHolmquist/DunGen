@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Airsto.h"
 #include "DungeonManager.h"
+#include "Components/ArrowComponent.h"
 
 APortal::APortal()
 {
@@ -30,6 +31,9 @@ APortal::APortal()
 
 	TeleportBox = CreateDefaultSubobject<UBoxComponent>(TEXT("TeleportBox"));
 	TeleportBox->SetupAttachment((GetRootComponent()));
+
+	ExitDirectionArrow = CreateDefaultSubobject<UArrowComponent>(TEXT("ExitDirectionArrow"));
+	ExitDirectionArrow->SetupAttachment(GetRootComponent());
 	
 
 }
@@ -63,21 +67,18 @@ void APortal::OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 	AAirsto* Airsto = Cast<AAirsto>(OtherActor);
 	if (!Airsto) return;
 
-	if (TeleportLocation.IsNearlyZero())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Portal '%s' has no TeleportLocation set."), *GetName());
-		return;
-	}
-
 	bCanTeleport = false;
 
 	SpawnEntrySound();
-	TeleportPlayer(Airsto, TeleportLocation);
+	TeleportPlayer(Airsto);
+
+	const FString LocationString = TeleportLocation.ToString();
+	UE_LOG(LogTemp, Warning, TEXT("Teleporting to %s"), *LocationString);
 }
 
 void APortal::OnBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (OverlappedComponent != EntryBox && OverlappedComponent != ExitBox) return;
+	if (OverlappedComponent != ExitBox && OverlappedComponent != ExitBox) return;
 
 	if (Cast<AAirsto>(OtherActor))
 	{
@@ -97,7 +98,7 @@ void APortal::SpawnEntrySound()
 	}
 }
 
-void APortal::TeleportPlayer(AAirsto* Airsto, FVector Location)
+void APortal::TeleportPlayer(AAirsto* Airsto)
 {
 	if (!Airsto) return;
 
@@ -109,10 +110,12 @@ void APortal::TeleportPlayer(AAirsto* Airsto, FVector Location)
 	if (ConnectedPortal)
 	{
 		ConnectedPortal->bCanTeleport = false;
+		FVector Location = ConnectedPortal->GetActorLocation();
+		const FVector MoveUp = Location + FVector(0.f, 0.f, 50.f);
+		const FVector ExitDirection = ConnectedPortal->GetExitDirection();
+		Airsto->SetActorLocation(MoveUp);
+		Airsto->SetActorRotation(ExitDirection.Rotation());
 	}
-
-	const FVector MoveUp = Location + FVector(0.f, 0.f, 100.f);
-	Airsto->SetActorLocation(MoveUp);
 	
 }
 
@@ -130,4 +133,24 @@ FVector APortal::GetTeleportPointLocation() const
 	}
 
 	return GetActorLocation() + FVector(0.f, 0.f, 100.f);
+}
+
+void APortal::SetCanTeleport(bool State)
+{
+	bCanTeleport = State;
+}
+
+FVector APortal::GetPortalForwardVector() const
+{
+	return PortalMesh ? PortalMesh->GetForwardVector() : GetActorForwardVector();
+}
+
+FVector APortal::GetExitDirection() const
+{
+	if (ExitDirectionArrow)
+	{
+		return ExitDirectionArrow->GetForwardVector();
+	}
+
+	return GetActorForwardVector();
 }

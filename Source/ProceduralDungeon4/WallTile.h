@@ -7,6 +7,8 @@
 #include "Tile.h"
 #include "WallTile.generated.h"
 
+class USceneComponent;
+
 UCLASS()
 class PROCEDURALDUNGEON4_API AWallTile : public ATile
 {
@@ -20,8 +22,13 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Portal)
+	USceneComponent* PortalSpawnPoint;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	USceneComponent* GetPortalSpawnPoint() const;
 
 };

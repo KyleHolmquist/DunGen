@@ -26,6 +26,10 @@ void ACA_FloorGenerator::BeginPlay()
 void ACA_FloorGenerator::GenerateModule()
 {
 	GeneratedEmptyLocations.Reset();
+	GeneratedWallActors.Reset();
+	WallSegments.Reset();
+	WallActorMap.Reset();
+	
 	InitializeMap();
 	RunSimulation();
 	EnsureConnectivity();
@@ -33,7 +37,7 @@ void ACA_FloorGenerator::GenerateModule()
 
 	const int32 DoorCount = (DesiredExteriorDoors > 0) ? DesiredExteriorDoors : DefaultDoorCount;
 
-	CreateDoors(DoorCount);
+	CreateDoors(0);
 
 	bHasFinishedGenerating = true;
 }
@@ -233,40 +237,61 @@ void ACA_FloorGenerator::SpawnGeometry()
 				//Remember this wall actor at (x, y)
 				WallActorMap[Index(x, y)] = WallActor;
 
-				// Count neighboring floor cells, which is when CurrentMap == false
-				int32 FloorNeighbors = 0;
-				FIntPoint InteriorFloorCell(-1, -1);
-
-				// Check 4-connected neighbours
-				const int32 DX[4] = { 1, -1, 0,  0 };
-				const int32 DY[4] = { 0,  0, 1, -1 };
-
-				for (int32 i = 0; i < 4; ++i)
+				// Check whether this wall is a valid portal candidate
+				FIntPoint InteriorFloorCell;
+				if (IsValidPortalCandidate(x, y, InteriorFloorCell))
 				{
-					const int32 NX = x + DX[i];
-					const int32 NY = y + DY[i];
+					const FRotator PortalFacingRotation = GetPortalFacingRotation(x, y, InteriorFloorCell);
+					WallActor->SetActorRotation(PortalFacingRotation + FRotator(0.f, 180.f, 0.f));
 
-					if (NX < 0 || NX >= MapWidth || NY < 0 || NY >= MapHeight)
-						continue;
-
-					// floor == !CurrentMap
-					if (!CurrentMap[Index(NX, NY)])
-					{
-						++FloorNeighbors;
-						InteriorFloorCell = FIntPoint(NX, NY);
-					}
-				}
-
-				//Outer walls only have one floor neighbour.
-				if (FloorNeighbors == 1)
-				{
 					FDungeonWallSegment Seg;
 					Seg.Cell = InteriorFloorCell;
 					Seg.WallCell = FIntPoint(x, y);
 					Seg.Direction = 0;
 					Seg.WallActor = WallActor;
 					WallSegments.Add(Seg);
+
+					//Only add good exterior candidates here
+					GeneratedWallActors.Add(WallActor);
+
+					UE_LOG(LogTemp, Warning, TEXT("PortalCandidate (%d,%d) Rot=%s"),
+						x, y, *WallActor->GetActorRotation().ToString());
 				}
+
+				// //Count neighboring floor cells, which is when CurrentMap == false
+				// int32 FloorNeighbors = 0;
+				// //FIntPoint InteriorFloorCell(-1, -1);
+
+				// //Check 4-connected neighbors
+				// const int32 DX[4] = { 1, -1, 0,  0 };
+				// const int32 DY[4] = { 0,  0, 1, -1 };
+
+				// for (int32 i = 0; i < 4; ++i)
+				// {
+				// 	const int32 NX = x + DX[i];
+				// 	const int32 NY = y + DY[i];
+
+				// 	if (NX < 0 || NX >= MapWidth || NY < 0 || NY >= MapHeight)
+				// 		continue;
+
+				// 	//floor == !CurrentMap
+				// 	if (!CurrentMap[Index(NX, NY)])
+				// 	{
+				// 		++FloorNeighbors;
+				// 		InteriorFloorCell = FIntPoint(NX, NY);
+				// 	}
+				// }
+
+				// //Outer walls only have one floor neighbour.
+				// if (FloorNeighbors == 1)
+				// {
+				// 	FDungeonWallSegment Seg;
+				// 	Seg.Cell = InteriorFloorCell;
+				// 	Seg.WallCell = FIntPoint(x, y);
+				// 	Seg.Direction = 0;
+				// 	Seg.WallActor = WallActor;
+				// 	WallSegments.Add(Seg);
+				// }
 			}
 		}
 	}
@@ -572,7 +597,7 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 		// DoorInfo.Location = WallTransform.GetLocation() + DoorOffset;
 		// DoorInfo.Rotation = WallTransform.GetRotation().Rotator();
 		// ExteriorDoors.Add(DoorInfo);
-		AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+		//AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
 
 		//Spawn a door mesh
 		if (WallTileClass)
@@ -622,4 +647,114 @@ bool ACA_FloorGenerator::IsEmpty(int32 X, int32 Y) const
     //CurrentMap: true = wall, false = floor
     //"Empty" means floor space
     return !CurrentMap[Idx];
+}
+
+bool ACA_FloorGenerator::IsValidPortalCandidate(int32 WallX, int32 WallY, FIntPoint& OutInteriorFloorCell) const
+{
+	OutInteriorFloorCell = FIntPoint(-1, -1);
+
+	if (WallX < 0 || WallX >= MapWidth || WallY < 0 || WallY >= MapHeight)
+	{
+		return false;
+	}
+
+	// Must actually be a wall cell
+	if (!CurrentMap.IsValidIndex(Index(WallX, WallY)) || !CurrentMap[Index(WallX, WallY)])
+	{
+		return false;
+	}
+
+	// Find exactly one interior floor neighbour
+	int32 FloorNeighbors = 0;
+
+	const int32 DX[4] = { 1, -1, 0,  0 };
+	const int32 DY[4] = { 0,  0, 1, -1 };
+
+	for (int32 i = 0; i < 4; ++i)
+	{
+		const int32 NX = WallX + DX[i];
+		const int32 NY = WallY + DY[i];
+
+		if (NX < 0 || NX >= MapWidth || NY < 0 || NY >= MapHeight)
+		{
+			continue;
+		}
+
+		// floor == false
+		if (!CurrentMap[Index(NX, NY)])
+		{
+			++FloorNeighbors;
+			OutInteriorFloorCell = FIntPoint(NX, NY);
+		}
+	}
+
+	if (FloorNeighbors != 1)
+	{
+		return false;
+	}
+
+	// Direction from interior floor toward the wall, i.e. outward
+	int32 DirX = WallX - OutInteriorFloorCell.X;
+	int32 DirY = WallY - OutInteriorFloorCell.Y;
+
+	DirX = FMath::Clamp(DirX, -1, 1);
+	DirY = FMath::Clamp(DirY, -1, 1);
+
+	// Must be cardinal
+	if ((DirX == 0 && DirY == 0) || (DirX != 0 && DirY != 0))
+	{
+		return false;
+	}
+
+	// March outward from this wall to ensure this really leads to the exterior.
+	// Everything from the wall cell to the border must remain wall.
+	int32 CX = WallX;
+	int32 CY = WallY;
+
+	while (CX >= 0 && CX < MapWidth && CY >= 0 && CY < MapHeight)
+	{
+		const int32 CellIdx = Index(CX, CY);
+
+		// If we hit a floor before reaching the border, this is not a clean exterior candidate.
+		if (!CurrentMap[CellIdx])
+		{
+			return false;
+		}
+
+		// Reached border while still inside wall chain = valid exterior-facing candidate
+		if (CX == 0 || CX == MapWidth - 1 || CY == 0 || CY == MapHeight - 1)
+		{
+			return true;
+		}
+
+		CX += DirX;
+		CY += DirY;
+	}
+
+	return false;
+}
+
+FRotator ACA_FloorGenerator::GetPortalFacingRotation(int32 WallX, int32 WallY, const FIntPoint& InteriorFloorCell) const
+{
+	const int32 DirX = WallX - InteriorFloorCell.X;
+	const int32 DirY = WallY - InteriorFloorCell.Y;
+
+	if (DirX == 1 && DirY == 0)
+	{
+		return FRotator(0.f, 0.f, 0.f);
+	}
+	if (DirX == -1 && DirY == 0)
+	{
+		return FRotator(0.f, 180.f, 0.f);
+	}
+	if (DirX == 0 && DirY == 1)
+	{
+		return FRotator(0.f, 90.f, 0.f);
+	}
+	if (DirX == 0 && DirY == -1)
+	{
+		return FRotator(0.f, -90.f, 0.f);
+	}
+
+	return FRotator::ZeroRotator;
 }
