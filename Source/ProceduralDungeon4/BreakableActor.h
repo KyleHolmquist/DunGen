@@ -11,6 +11,9 @@
 
 class UGeometryCollectionComponent;
 class ATreasure;
+class AItem;
+class AWisdom;
+class AHealthPickup;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API ABreakableActor : public AActor, public IHitInterface
@@ -36,8 +39,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	class UCapsuleComponent* Capsule;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Procedural Dungeon")
+	TArray<TSubclassOf<AItem>> RewardTable;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	class TSubclassOf<ATreasure> TreasureClass;
+	TSubclassOf<AItem> TreasureClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<AItem> WisdomClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<AItem> HealthPickupClass;
 
 	UFUNCTION()
 	void OnChaosBreakEvent(const FChaosBreakEvent& BreakEvent);
@@ -47,6 +59,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Breakable Properties")
 	TArray<TSubclassOf<class ATreasure>> TreasureClasses;
 
+	UPROPERTY(VisibleAnywhere)
 	bool bBroken = false;
 
 public:

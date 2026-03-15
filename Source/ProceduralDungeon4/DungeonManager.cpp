@@ -811,7 +811,7 @@ void ADungeonManager::SpawnBreakables()
 		}
 
 		//Move the Breakable up a bit so it doesn't fall through the floor
-		const FVector Location = FVector(Cell.X, Cell.Y, Cell.Z + 10.f);
+		const FVector Location = FVector(Cell.X, Cell.Y, Cell.Z + 0.f);
 
 		//Create a random float for the object's yaw rotation
 		float RandomYaw = FMath::RandRange(0.f, 360.f);
@@ -1365,6 +1365,14 @@ void ADungeonManager::SpawnNewDungeon()
 					}
 
 					APortal* AwayPortal = PortalManager->SpawnAwayPortal(PortalSpawnLocation, PortalRotation);
+					if (ABSP_FloorGenerator* BSPGen = Cast<ABSP_FloorGenerator>(DungeonModule))
+					{
+						if (USceneComponent* PortalFacingRoot = SelectedWallActor->GetPortalFacingRoot())
+						{
+							PortalFacingRoot->AddLocalRotation(FRotator(0.f, 90.f, 0.f));
+
+						}
+					}
 
 					if (IsValid(AwayPortal))
 					{

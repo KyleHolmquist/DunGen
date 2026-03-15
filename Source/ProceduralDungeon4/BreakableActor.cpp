@@ -4,6 +4,8 @@
 #include "BreakableActor.h"
 #include "GeometryCollection/GeometryCollectionComponent.h"
 #include "Treasure.h"
+#include "Wisdom.h"
+#include "HealthPickup.h"
 #include "Components/CapsuleComponent.h"
 
 
@@ -29,6 +31,23 @@ void ABreakableActor::BeginPlay()
 	Super::BeginPlay();
 	GeometryCollection->SetNotifyBreaks(true);
 	GeometryCollection->OnChaosBreakEvent.AddDynamic(this, &ABreakableActor::OnChaosBreakEvent);
+
+	RewardTable.Reset();
+
+	if (TreasureClass)
+	{
+		RewardTable.Add(TreasureClass);
+	}
+
+	if (WisdomClass)
+	{
+		RewardTable.Add(WisdomClass);
+	}
+
+	if (HealthPickupClass)
+	{
+		RewardTable.Add(HealthPickupClass);
+	}
 	
 }
 
@@ -49,30 +68,33 @@ void ABreakableActor::HandleHit()
 	if (bBroken) return;
 	bBroken = true;
 	UWorld* World = GetWorld();
-	if (World && TreasureClasses.Num() > 0)
+	if (World && RewardTable.Num() > 0)
 	{
 		FVector Location = GetActorLocation();
 		Location.Z += 75.f;
 
-		const int32 Selection = FMath::RandRange(0, TreasureClasses.Num() - 1);
+		const int32 Selection = FMath::RandRange(0, RewardTable.Num() - 1);
 
-		World->SpawnActor<ATreasure>(TreasureClasses[Selection], Location, GetActorRotation());
+		AItem* SpawnedItem = World->SpawnActor<AItem>(RewardTable[Selection], Location, GetActorRotation());
 	}
 }
 
 void ABreakableActor::GetHit_Implementation(const FVector& ImpactPoint, AActor* Hitter)
 {
 	if (bBroken) return;
+
+	SetLifeSpan(2.f);
+
 	bBroken = true;
 	UWorld* World = GetWorld();
-	if (World && TreasureClasses.Num() > 0)
+	if (World && RewardTable.Num() > 0)
 	{
 		FVector Location = GetActorLocation();
-		Location.Z += 75.f;
+		Location.Z += 15.f;
 
-		const int32 Selection = FMath::RandRange(0, TreasureClasses.Num() - 1);
+		const int32 Selection = FMath::RandRange(0, RewardTable.Num() - 1);
 
-		World->SpawnActor<ATreasure>(TreasureClasses[Selection], Location, GetActorRotation());
+		World->SpawnActor<AItem>(RewardTable[Selection], Location, GetActorRotation());
 	}
 }
 

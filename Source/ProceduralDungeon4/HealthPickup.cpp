@@ -43,6 +43,9 @@ void AHealthPickup::BeginPlay()
 
 	);
 	DesiredZ = HitResult.ImpactPoint.Z + 50.f;
+
+	//Get the Min/Max HealthPickup amounts from the DungeonManager
+	//Set the SpawnedHealthPickup's HealthAmount
 }
 
 

@@ -58,6 +58,26 @@ protected:
 	UPROPERTY(EditAnywhere)
 	UNiagaraComponent* ItemEffect;
 
+	UPROPERTY(EditAnywhere, Category="Movement|Falling");
+	bool bSetItemLaunching = false;
+
+	//Falling Movement
+	UPROPERTY(EditAnywhere, Category="Movement|Falling");
+	float LinearDamping = 10.f;
+
+	//Spinning Movement
+	UPROPERTY(EditAnywhere, Category="Movement|Falling");
+	float AngularDamping = 10.f;
+
+	UPROPERTY(EditAnywhere, Category="Movement|Launching");
+	float LaunchStrengthMin = 1000.f;
+
+	UPROPERTY(EditAnywhere, Category="Movement|Launching");
+	float LaunchStrengthMax = 2000.f;
+
+
+
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Movement")
 	float RunningTime;

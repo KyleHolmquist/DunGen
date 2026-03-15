@@ -36,6 +36,28 @@ void AItem::BeginPlay()
 
 	Sphere->OnComponentBeginOverlap.AddDynamic(this, &AItem::OnSphereOverlap);
 	Sphere->OnComponentEndOverlap.AddDynamic(this, &AItem::OnSphereEndOverlap);
+
+	if (bSetItemLaunching)
+	{
+		if (ItemMesh)
+		{
+			//Physics values
+			ItemMesh->SetSimulatePhysics(true);
+			ItemMesh->SetEnableGravity(true);
+			ItemMesh->SetLinearDamping(LinearDamping);
+			ItemMesh->SetAngularDamping(AngularDamping);
+			ItemMesh->SetMobility(EComponentMobility::Movable);
+
+			//Launch the Item
+			FVector Dir = FMath::VRand();
+			//Ensure upward direction
+			Dir.Z = FMath::Abs(Dir.Z);
+
+			float Strength = FMath::RandRange(LaunchStrengthMin, LaunchStrengthMax);
+
+			ItemMesh->AddImpulse(Dir * Strength, NAME_None, true);
+		}
+	}
 	
 }
 

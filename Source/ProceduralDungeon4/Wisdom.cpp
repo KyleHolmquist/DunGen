@@ -43,6 +43,9 @@ void AWisdom::BeginPlay()
 
 	);
 	DesiredZ = HitResult.ImpactPoint.Z + 50.f;
+
+	//Get the Min/Max Wisdom amounts from the DungeonManager
+	//Set the SpawnedWisdom's WisdomAmount
 }
 
 

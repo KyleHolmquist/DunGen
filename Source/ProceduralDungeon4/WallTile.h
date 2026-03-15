@@ -23,12 +23,16 @@ protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Portal)
+	USceneComponent* PortalFacingRoot;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Portal)
 	USceneComponent* PortalSpawnPoint;
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	USceneComponent* GetPortalSpawnPoint() const;
+	USceneComponent* GetPortalFacingRoot() const { return PortalFacingRoot; }
+	USceneComponent* GetPortalSpawnPoint() const { return PortalSpawnPoint;}
 
 };

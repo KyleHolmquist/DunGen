@@ -33,6 +33,7 @@ void ABSP_FloorGenerator::BeginPlay()
 void ABSP_FloorGenerator::GenerateModule()
 {
 	GeneratedEmptyLocations.Reset();
+	GeneratedWallActors.Reset();
 	GenerateBSP();
 	SpawnFloorPlanes();
 
@@ -382,123 +383,638 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 }
 
 
+// void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
+// {
+// 	if (WallSegments.Num() == 0) return;
+
+// 	UWorld* World = GetWorld();
+// 	if (!World) return;
+
+// 	const int32 RoomCount = LeafRegions.Num();
+// 	if (RoomCount == 0) return;
+
+// 	//How many wall segments wide a door should be
+// 	const int32 DoorSegments = FMath::Max(1, FMath::RoundToInt(DoorWidth / TileSize));
+
+// 	//Deterministic RNG for the doors
+// 	FRandomStream Rng;
+// 	if (Seed >=0) Rng.Initialize(Seed + 777);
+// 	else Rng.GenerateNewSeed();
+
+// 	// Helper: neighbour cell in grid space
+//     auto GetNeighborCell = [](const FDungeonWallSegment& Seg) -> FIntPoint
+//     {
+//         FIntPoint N = Seg.Cell;
+//         switch ((EWallDir)Seg.Direction)
+//         {
+//         case EWallDir::Bottom: N.Y -= 1; break;
+//         case EWallDir::Top:    N.Y += 1; break;
+//         case EWallDir::Left:   N.X -= 1; break;
+//         case EWallDir::Right:  N.X += 1; break;
+//         }
+//         return N;
+//     };
+
+// 	//Check to see if  this wall segment touches any perpendicular wall anywhere along its length
+// 	auto SegmentTouchesPerpendicular = [&](int32 Index) -> bool
+// 	{
+// 		if (!WallSegments.IsValidIndex(Index)) return false;
+// 		const FDungeonWallSegment& Seg = WallSegments[Index];
+// 		if (!Seg.WallActor.IsValid()) return false;
+
+// 		AWallTile* ThisActor = Seg.WallActor.Get();
+// 		const FVector ThisLoc = ThisActor->GetActorLocation();
+
+// 		const bool bThisHorizontal =
+// 			(Seg.Direction == EWallDir::Bottom || Seg.Direction == EWallDir::Top);
+
+// 		const float HalfLen = TileSize * 0.5f;
+
+// 		for (int32 j = 0; j < WallSegments.Num(); ++j)
+// 		{
+// 			if (j == Index) continue;
+
+// 			const FDungeonWallSegment& OtherSeg = WallSegments[j];
+// 			if (!OtherSeg.WallActor.IsValid()) continue;
+
+// 			const bool bOtherHorizontal =
+// 				(OtherSeg.Direction == EWallDir::Bottom || OtherSeg.Direction == EWallDir::Top);
+
+// 			//Only care about perpendicular walls
+// 			if (bThisHorizontal == bOtherHorizontal)
+// 				continue;
+
+// 			AWallTile* OtherActor = OtherSeg.WallActor.Get();
+// 			const FVector OtherLoc = OtherActor->GetActorLocation();
+
+// 			if (bThisHorizontal)
+// 			{
+// 				//Horizontal extends along X, other is vertical along Y
+// 				const bool bXOverlap =
+// 					OtherLoc.X >= ThisLoc.X - HalfLen && OtherLoc.X <= ThisLoc.X + HalfLen;
+// 				const bool bYOverlap =
+// 					ThisLoc.Y >= OtherLoc.Y - HalfLen && ThisLoc.Y <= OtherLoc.Y + HalfLen;
+
+// 				if (bXOverlap && bYOverlap)
+// 					return true;
+// 			}
+// 			else
+// 			{
+// 				//This is vertical, other is horizontal
+// 				const bool bXOverlap =
+// 					ThisLoc.X >= OtherLoc.X - HalfLen && ThisLoc.X <= OtherLoc.X + HalfLen;
+// 				const bool bYOverlap =
+// 					OtherLoc.Y >= ThisLoc.Y - HalfLen && OtherLoc.Y <= ThisLoc.Y + HalfLen;
+
+// 				if (bXOverlap && bYOverlap)
+// 					return true;
+// 			}
+// 		}
+
+// 		return false;
+// 	};
+
+// 	//Helper that returns indices for a contiguous run of segments along the same wall.
+// 	//BaseIndex is the start of the segment. Walk forward along the wall direction and
+// 	//Try to collect DoorSegments total. Returns false if unable to.
+// 	auto CollectAlongWallSegmentIndices = [&](int32 BaseIndex, TArray<int32>& OutIndices) -> bool
+// 	{
+// 		OutIndices.Reset();
+
+// 		if (!WallSegments.IsValidIndex(BaseIndex))
+// 			return false;
+
+// 		FDungeonWallSegment& BaseSeg = WallSegments[BaseIndex];
+// 		if (!BaseSeg.WallActor.IsValid())
+// 			return false;
+
+// 		OutIndices.Add(BaseIndex);
+
+// 		//Tangent direction along the wall
+// 		FIntPoint Tangent(0, 0);
+// 		switch ((EWallDir)BaseSeg.Direction)
+// 		{
+// 		case EWallDir::Bottom:
+// 		//Increase X
+// 		case EWallDir::Top:   Tangent = FIntPoint(1, 0); break;
+// 		case EWallDir::Left:
+// 		//Increase Y
+// 		case EWallDir::Right: Tangent = FIntPoint(0, 1); break;
+// 		}
+
+// 		FIntPoint CurrentCell = BaseSeg.Cell;
+
+// 		for (int32 s = 1; s < DoorSegments; ++s)
+// 		{
+// 			CurrentCell += Tangent;
+// 			bool bFound = false;
+
+// 			for (int32 i = 0; i < WallSegments.Num(); ++i)
+// 			{
+// 				if (i == BaseIndex) continue;
+
+// 				FDungeonWallSegment& Other = WallSegments[i];
+// 				if (!Other.WallActor.IsValid()) continue;
+
+// 				if (Other.Cell == CurrentCell && Other.Direction == BaseSeg.Direction)
+// 				{
+// 					OutIndices.Add(i);
+// 					bFound = true;
+// 					break;
+// 				}
+// 			}
+
+// 			if (!bFound)
+// 			{
+// 				//Not enough contiguous segments to make a wide door
+// 				return false;
+// 			}
+
+// 			//Reject door locations where any segment in the run touches a perpendicular wall
+// 			for (int32 idx : OutIndices)
+// 			{
+// 				if (SegmentTouchesPerpendicular(idx))
+// 				return false;
+// 			}
+// 		}
+
+// 		return true;
+// 	};
+
+//     //Helper to destroy this segment and its opposite twin, additional door-width segments along the wall,
+// 	//And eacj of their opposite twins, if they exist.
+//    auto DestroySegmentAndOpposite = [&](int32 SegIndex)
+// 	{
+// 		TArray<int32> DoorSegIndices;
+// 		if (!CollectAlongWallSegmentIndices(SegIndex, DoorSegIndices))
+// 			return; 
+
+// 		for (int32 Index : DoorSegIndices)
+// 		{
+// 			if (!WallSegments.IsValidIndex(Index)) continue;
+
+// 			FDungeonWallSegment& Seg = WallSegments[Index];
+// 			AWallTile* Actor = Seg.WallActor.Get();
+// 			if (Actor) Actor->Destroy();
+// 			Seg.WallActor = nullptr;
+
+// 			//Destroy the opposite twin segment on the other side of the wall
+// 			FIntPoint NeighborCell = GetNeighborCell(Seg);
+// 			uint8 OppDir = 0;
+// 			switch ((EWallDir)Seg.Direction)
+// 			{
+// 			case EWallDir::Bottom: OppDir = (uint8)EWallDir::Top;    break;
+// 			case EWallDir::Top:    OppDir = (uint8)EWallDir::Bottom; break;
+// 			case EWallDir::Left:   OppDir = (uint8)EWallDir::Right;  break;
+// 			case EWallDir::Right:  OppDir = (uint8)EWallDir::Left;   break;
+// 			}
+
+// 			for (int32 j = 0; j < WallSegments.Num(); ++j)
+// 			{
+// 				if (j == Index) continue;
+// 				FDungeonWallSegment& Other = WallSegments[j];
+// 				if (!Other.WallActor.IsValid()) continue;
+
+// 				if (Other.Cell == NeighborCell && Other.Direction == OppDir)
+// 				{
+// 					if (AWallTile* OtherActor = Other.WallActor.Get())
+// 					{
+// 						OtherActor->Destroy();
+// 					}
+// 					Other.WallActor = nullptr;
+// 					break;
+// 				}
+// 			}
+// 		}
+// 	};
+
+//     // -- Classify interior vs exterior segments --
+//     TArray<TArray<int32>> InteriorWallsPerRoom;
+//     InteriorWallsPerRoom.SetNum(RoomCount);
+
+//     TArray<int32> ExteriorWalls;
+
+//     for (int32 i = 0; i < WallSegments.Num(); ++i)
+//     {
+//         FDungeonWallSegment& Seg = WallSegments[i];
+//         if (!Seg.WallActor.IsValid()) continue;
+
+//         int32* RoomA = CellToRoomIndex.Find(Seg.Cell);
+//         if (!RoomA) continue;
+
+//         FIntPoint NeighborCell = GetNeighborCell(Seg);
+//         int32* RoomB = CellToRoomIndex.Find(NeighborCell);
+
+//         TArray<int32> DummyDoorSegs;
+
+// 		if (RoomB && *RoomB != *RoomA)
+// 		{
+// 			//Only consider this as a candidate if it can fit a full-width door
+// 			if (CollectAlongWallSegmentIndices(i, DummyDoorSegs))
+// 			{
+// 				InteriorWallsPerRoom[*RoomA].Add(i);
+// 				InteriorWallsPerRoom[*RoomB].Add(i);
+// 			}
+// 		}
+// 		else if (!RoomB)
+// 		{
+// 			// Exterior wall, only consider a candidate if it can fit a full-width door
+// 			if (CollectAlongWallSegmentIndices(i, DummyDoorSegs))
+// 			{
+// 				ExteriorWalls.Add(i);
+// 			}
+// 		}
+
+//     }
+
+//     // -- Interior doors. Ensure each room has doors --
+//     for (int32 RoomIndex = 0; RoomIndex < RoomCount; ++RoomIndex)
+//     {
+//         auto& Candidates = InteriorWallsPerRoom[RoomIndex];
+//         if (Candidates.Num() == 0) continue;
+
+// 		const int32 DoorsThisRoom = FMath::RandRange(DoorsPerRoomMin, DoorsPerRoomMax);
+//         const int32 NumDoorsForRoom = FMath::Min(DoorsThisRoom, Candidates.Num());
+
+//         for (int32 d = 0; d < NumDoorsForRoom; ++d)
+//         {
+//             const int32 PickIdx   = Rng.RandRange(0, Candidates.Num() - 1);
+//             const int32 SegIndex  = Candidates[PickIdx];
+//             Candidates.RemoveAtSwap(PickIdx);
+
+//             if (!WallSegments.IsValidIndex(SegIndex)) continue;
+//             FDungeonWallSegment& Seg = WallSegments[SegIndex];
+//             if (!Seg.WallActor.IsValid()) continue;
+
+//             const FTransform T = Seg.WallActor->GetActorTransform();
+//             DestroySegmentAndOpposite(SegIndex);
+
+//             //Door mesh
+//             if (DoorMesh)
+//             {
+
+// 				FActorSpawnParameters Params;
+// 				Params.Owner = this;
+// 				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+// 				if (!WallTileClass) continue;
+
+// 				AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, T.GetLocation(), T.GetRotation().Rotator(), Params);
+
+//                 if (DoorActor)
+//                 {
+// 					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
+//                     if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
+//                     {
+// 						DoorComp->SetMobility(EComponentMobility::Movable);
+
+// 						FVector DoorScale = T.GetScale3D();
+// 						//Stretch the door mesh to cover all segments
+// 						DoorScale.X *= DoorSegments;
+//                         DoorActor->SetActorScale3D(DoorScale);
+
+// 						GeneratedDoorActors.Add(DoorActor);
+
+//                     }
+//                     else
+//                     {
+//                         DoorActor->Destroy();
+//                     }
+//                 }
+//             }
+//         }
+
+// 			auto GetPortalFacingRotationFromSegment = [&](const FDungeonWallSegment& Seg) -> FRotator
+// 			{
+// 				switch ((EWallDir)Seg.Direction)
+// 				{
+// 				case EWallDir::Bottom:
+// 					// bottom wall: portal faces into room (+Y)
+// 					return FRotator(0.f, 90.f, 0.f);
+
+// 				case EWallDir::Top:
+// 					// top wall: portal faces into room (-Y)
+// 					return FRotator(0.f, -90.f, 0.f);
+
+// 				case EWallDir::Left:
+// 					// left wall: portal faces into room (+X)
+// 					return FRotator(0.f, 0.f, 0.f);
+
+// 				case EWallDir::Right:
+// 					// right wall: portal faces into room (-X)
+// 					return FRotator(0.f, 180.f, 0.f);
+
+// 				default:
+// 					return FRotator::ZeroRotator;
+// 				}
+// 			};
+
+// 			auto ConfigurePortalComponentsForWall = [&](AWallTile* WallActor, const FDungeonWallSegment& Seg) -> bool
+// 			{
+// 				if (!WallActor) return false;
+
+// 				USceneComponent* PortalFacingRoot = WallActor->GetPortalFacingRoot();
+// 				USceneComponent* PortalSpawnPoint = WallActor->GetPortalSpawnPoint();
+
+// 				if (!PortalFacingRoot || !PortalSpawnPoint)
+// 				{
+// 					UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: PortalFacingRoot or PortalSpawnPoint missing on wall tile."));
+// 					return false;
+// 				}
+
+// 				const FRotator PortalFacingRotation = GetPortalFacingRotationFromSegment(Seg);
+
+// 				// Rotate only the helper parent, never the wall actor itself
+// 				PortalFacingRoot->SetRelativeRotation(PortalFacingRotation);
+
+// 				return true;
+// 			};
+
+
+// 			// -- Choose one portal location from exterior wall candidates --
+// 			TArray<int32> PortalCandidates;
+
+// 			for (int32 SegIndex : ExteriorWalls)
+// 			{
+// 				if (!WallSegments.IsValidIndex(SegIndex)) continue;
+
+// 				FDungeonWallSegment& Seg = WallSegments[SegIndex];
+// 				if (!Seg.WallActor.IsValid()) continue;
+
+// 				PortalCandidates.Add(SegIndex);
+// 			}
+
+// 			if (PortalCandidates.Num() == 0)
+// 			{
+// 				UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: No valid exterior wall candidates found for portal."));
+// 				return;
+// 			}
+
+// 			const int32 PortalPickIdx = Rng.RandRange(0, PortalCandidates.Num() - 1);
+// 			const int32 ChosenSegIndex = PortalCandidates[PortalPickIdx];
+
+// 			if (!WallSegments.IsValidIndex(ChosenSegIndex)) return;
+
+// 			FDungeonWallSegment& ChosenSeg = WallSegments[ChosenSegIndex];
+// 			if (!ChosenSeg.WallActor.IsValid()) return;
+
+// 			AWallTile* ChosenWallActor = ChosenSeg.WallActor.Get();
+// 			if (!ChosenWallActor) return;
+
+// 			GeneratedWallActors.Add(ChosenWallActor);
+
+// 			const FVector PortalLocation = ChosenWallActor->GetActorLocation();
+// 			const FRotator PortalRotation = GetPortalFacingRotationFromSegment(ChosenSeg);
+
+// 			// Record the portal location for DungeonManager
+// 			AddExteriorDoorWorld(PortalLocation, PortalRotation);
+
+// 			UE_LOG(LogTemp, Warning, TEXT("BSP portal chosen at %s facing %s"),
+// 				*PortalLocation.ToString(),
+// 				*PortalRotation.ToString());
+
+
+	   
+// 	}
+
+//     // -- Exterior doors --
+//     //ExteriorDoorCount = FMath::Min(ExteriorDoorCount, ExteriorWalls.Num());
+// 	// ExteriorDoorCount = 0;
+
+//     // for (int32 d = 0; d < ExteriorDoorCount && ExteriorWalls.Num() > 0; ++d)
+//     // {
+//     //     const int32 PickIdx  = Rng.RandRange(0, ExteriorWalls.Num() - 1);
+//     //     const int32 SegIndex = ExteriorWalls[PickIdx];
+//     //     ExteriorWalls.RemoveAtSwap(PickIdx);
+
+//     //     if (!WallSegments.IsValidIndex(SegIndex)) continue;
+//     //     FDungeonWallSegment& Seg = WallSegments[SegIndex];
+//     //     if (!Seg.WallActor.IsValid()) continue;
+
+//     //     const FTransform WallTransform = Seg.WallActor->GetActorTransform();
+//     //     DestroySegmentAndOpposite(SegIndex);
+
+// 	// 	//Record the door so DungeonManager can use it
+// 	// 	// FExteriorDoor DoorInfo;
+// 	// 	// DoorInfo.Location = T.GetLocation();
+// 	// 	// DoorInfo.Rotation = T.GetRotation().Rotator();
+// 	// 	// ExteriorDoors.Add(DoorInfo);
+// 	// 	//AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+
+//     //     // if (DoorMesh)
+//     //     // {
+
+// 	// 	// 	FActorSpawnParameters Params;
+// 	// 	// 	Params.Owner = this;
+// 	// 	// 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+// 	// 	// 	if (!WallTileClass) continue;
+
+// 	// 	// 	AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
+			
+//     //     //     if (DoorActor)
+//     //     //     {
+// 	// 	// 		DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
+//     //     //         if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
+//     //     //         {
+// 	// 	// 			DoorComp->SetMobility(EComponentMobility::Movable);
+
+// 	// 	// 			FVector DoorScale = WallTransform.GetScale3D();
+// 	// 	// 			//Stretch the door mesh to cover all segments
+// 	// 	// 			DoorScale.X *= DoorSegments;
+
+// 	// 	// 			DoorActor->SetActorScale3D(DoorScale);
+
+// 	// 	// 			GeneratedDoorActors.Add(DoorActor);
+                    
+//     //     //         }
+//     //     //         else
+//     //     //         {
+//     //     //             DoorActor->Destroy();
+//     //     //         }
+//     //     //     }
+
+// 	// 	// 	UE_LOG(LogTemp, Warning, TEXT(" created %d exterior doors"), ExteriorDoors.Num());
+//     //     // }
+//     // }
+// }
+
 void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 {
-	if (WallSegments.Num() == 0) return;
+	if (WallSegments.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: No wall segments to process in CreateDoors."));
+		return;
+	}
 
 	UWorld* World = GetWorld();
-	if (!World) return;
+	if (!World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: World is null in CreateDoors."));
+		return;
+	}
 
 	const int32 RoomCount = LeafRegions.Num();
-	if (RoomCount == 0) return;
+	if (RoomCount == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: No rooms found in CreateDoors."));
+		return;
+	}
 
-	//How many wall segments wide a door should be
 	const int32 DoorSegments = FMath::Max(1, FMath::RoundToInt(DoorWidth / TileSize));
 
-	//Deterministic RNG for the doors
 	FRandomStream Rng;
-	if (Seed >=0) Rng.Initialize(Seed + 777);
-	else Rng.GenerateNewSeed();
+	if (Seed >= 0)
+	{
+		Rng.Initialize(Seed + 777);
+	}
+	else
+	{
+		Rng.GenerateNewSeed();
+	}
 
-	// Helper: neighbour cell in grid space
-    auto GetNeighborCell = [](const FDungeonWallSegment& Seg) -> FIntPoint
-    {
-        FIntPoint N = Seg.Cell;
-        switch ((EWallDir)Seg.Direction)
-        {
-        case EWallDir::Bottom: N.Y -= 1; break;
-        case EWallDir::Top:    N.Y += 1; break;
-        case EWallDir::Left:   N.X -= 1; break;
-        case EWallDir::Right:  N.X += 1; break;
-        }
-        return N;
-    };
+	auto GetNeighborCell = [](const FDungeonWallSegment& Seg) -> FIntPoint
+	{
+		FIntPoint N = Seg.Cell;
 
-	//Check to see if  this wall segment touches any perpendicular wall anywhere along its length
+		switch ((EWallDir)Seg.Direction)
+		{
+		case EWallDir::Bottom: N.Y -= 1; break;
+		case EWallDir::Top:    N.Y += 1; break;
+		case EWallDir::Left:   N.X -= 1; break;
+		case EWallDir::Right:  N.X += 1; break;
+		default: break;
+		}
+
+		return N;
+	};
+
+	auto IsHorizontal = [](const FDungeonWallSegment& Seg) -> bool
+	{
+		return Seg.Direction == EWallDir::Bottom || Seg.Direction == EWallDir::Top;
+	};
+
+	auto GetOppositeDirection = [](uint8 Direction) -> uint8
+	{
+		switch ((EWallDir)Direction)
+		{
+		case EWallDir::Bottom: return (uint8)EWallDir::Top;
+		case EWallDir::Top:    return (uint8)EWallDir::Bottom;
+		case EWallDir::Left:   return (uint8)EWallDir::Right;
+		case EWallDir::Right:  return (uint8)EWallDir::Left;
+		default:               return Direction;
+		}
+	};
+
+	auto GetPortalFacingRotationFromSegment = [](const FDungeonWallSegment& Seg) -> FRotator
+	{
+		switch ((EWallDir)Seg.Direction)
+		{
+		case EWallDir::Bottom: return FRotator(0.f,  90.f, 0.f);
+		case EWallDir::Top:    return FRotator(0.f, -90.f, 0.f);
+		case EWallDir::Left:   return FRotator(0.f,   0.f, 0.f);
+		case EWallDir::Right:  return FRotator(0.f, 180.f, 0.f);
+		default:               return FRotator::ZeroRotator;
+		}
+	};
+
 	auto SegmentTouchesPerpendicular = [&](int32 Index) -> bool
 	{
-		if (!WallSegments.IsValidIndex(Index)) return false;
+		if (!WallSegments.IsValidIndex(Index))
+		{
+			return false;
+		}
+
 		const FDungeonWallSegment& Seg = WallSegments[Index];
-		if (!Seg.WallActor.IsValid()) return false;
+		if (!Seg.WallActor.IsValid())
+		{
+			return false;
+		}
 
-		AWallTile* ThisActor = Seg.WallActor.Get();
-		const FVector ThisLoc = ThisActor->GetActorLocation();
-
-		const bool bThisHorizontal =
-			(Seg.Direction == EWallDir::Bottom || Seg.Direction == EWallDir::Top);
-
+		const bool bThisHorizontal = IsHorizontal(Seg);
+		const FVector ThisLoc = Seg.WallActor->GetActorLocation();
 		const float HalfLen = TileSize * 0.5f;
 
 		for (int32 j = 0; j < WallSegments.Num(); ++j)
 		{
-			if (j == Index) continue;
-
-			const FDungeonWallSegment& OtherSeg = WallSegments[j];
-			if (!OtherSeg.WallActor.IsValid()) continue;
-
-			const bool bOtherHorizontal =
-				(OtherSeg.Direction == EWallDir::Bottom || OtherSeg.Direction == EWallDir::Top);
-
-			//Only care about perpendicular walls
-			if (bThisHorizontal == bOtherHorizontal)
+			if (j == Index)
+			{
 				continue;
+			}
 
-			AWallTile* OtherActor = OtherSeg.WallActor.Get();
-			const FVector OtherLoc = OtherActor->GetActorLocation();
+			const FDungeonWallSegment& Other = WallSegments[j];
+			if (!Other.WallActor.IsValid())
+			{
+				continue;
+			}
+
+			const bool bOtherHorizontal = IsHorizontal(Other);
+			if (bThisHorizontal == bOtherHorizontal)
+			{
+				continue;
+			}
+
+			const FVector OtherLoc = Other.WallActor->GetActorLocation();
 
 			if (bThisHorizontal)
 			{
-				//Horizontal extends along X, other is vertical along Y
-				const bool bXOverlap =
-					OtherLoc.X >= ThisLoc.X - HalfLen && OtherLoc.X <= ThisLoc.X + HalfLen;
-				const bool bYOverlap =
-					ThisLoc.Y >= OtherLoc.Y - HalfLen && ThisLoc.Y <= OtherLoc.Y + HalfLen;
+				const bool bXOverlap = OtherLoc.X >= ThisLoc.X - HalfLen && OtherLoc.X <= ThisLoc.X + HalfLen;
+				const bool bYOverlap = ThisLoc.Y >= OtherLoc.Y - HalfLen && ThisLoc.Y <= OtherLoc.Y + HalfLen;
 
 				if (bXOverlap && bYOverlap)
+				{
 					return true;
+				}
 			}
 			else
 			{
-				//This is vertical, other is horizontal
-				const bool bXOverlap =
-					ThisLoc.X >= OtherLoc.X - HalfLen && ThisLoc.X <= OtherLoc.X + HalfLen;
-				const bool bYOverlap =
-					OtherLoc.Y >= ThisLoc.Y - HalfLen && OtherLoc.Y <= ThisLoc.Y + HalfLen;
+				const bool bXOverlap = ThisLoc.X >= OtherLoc.X - HalfLen && ThisLoc.X <= OtherLoc.X + HalfLen;
+				const bool bYOverlap = OtherLoc.Y >= ThisLoc.Y - HalfLen && OtherLoc.Y <= ThisLoc.Y + HalfLen;
 
 				if (bXOverlap && bYOverlap)
+				{
 					return true;
+				}
 			}
 		}
 
 		return false;
 	};
 
-	//Helper that returns indices for a contiguous run of segments along the same wall.
-	//BaseIndex is the start of the segment. Walk forward along the wall direction and
-	//Try to collect DoorSegments total. Returns false if unable to.
 	auto CollectAlongWallSegmentIndices = [&](int32 BaseIndex, TArray<int32>& OutIndices) -> bool
 	{
 		OutIndices.Reset();
 
 		if (!WallSegments.IsValidIndex(BaseIndex))
+		{
 			return false;
+		}
 
-		FDungeonWallSegment& BaseSeg = WallSegments[BaseIndex];
+		const FDungeonWallSegment& BaseSeg = WallSegments[BaseIndex];
 		if (!BaseSeg.WallActor.IsValid())
+		{
 			return false;
+		}
 
 		OutIndices.Add(BaseIndex);
 
-		//Tangent direction along the wall
 		FIntPoint Tangent(0, 0);
 		switch ((EWallDir)BaseSeg.Direction)
 		{
 		case EWallDir::Bottom:
-		//Increase X
-		case EWallDir::Top:   Tangent = FIntPoint(1, 0); break;
+		case EWallDir::Top:
+			Tangent = FIntPoint(1, 0);
+			break;
+
 		case EWallDir::Left:
-		//Increase Y
-		case EWallDir::Right: Tangent = FIntPoint(0, 1); break;
+		case EWallDir::Right:
+			Tangent = FIntPoint(0, 1);
+			break;
+
+		default:
+			return false;
 		}
 
 		FIntPoint CurrentCell = BaseSeg.Cell;
@@ -506,14 +1022,21 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 		for (int32 s = 1; s < DoorSegments; ++s)
 		{
 			CurrentCell += Tangent;
+
 			bool bFound = false;
 
 			for (int32 i = 0; i < WallSegments.Num(); ++i)
 			{
-				if (i == BaseIndex) continue;
+				if (i == BaseIndex)
+				{
+					continue;
+				}
 
-				FDungeonWallSegment& Other = WallSegments[i];
-				if (!Other.WallActor.IsValid()) continue;
+				const FDungeonWallSegment& Other = WallSegments[i];
+				if (!Other.WallActor.IsValid())
+				{
+					continue;
+				}
 
 				if (Other.Cell == CurrentCell && Other.Direction == BaseSeg.Direction)
 				{
@@ -525,14 +1048,14 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 
 			if (!bFound)
 			{
-				//Not enough contiguous segments to make a wide door
 				return false;
 			}
+		}
 
-			//Reject door locations where any segment in the run touches a perpendicular wall
-			for (int32 idx : OutIndices)
+		for (int32 Index : OutIndices)
+		{
+			if (SegmentTouchesPerpendicular(Index))
 			{
-				if (SegmentTouchesPerpendicular(idx))
 				return false;
 			}
 		}
@@ -540,41 +1063,46 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 		return true;
 	};
 
-    //Helper to destroy this segment and its opposite twin, additional door-width segments along the wall,
-	//And eacj of their opposite twins, if they exist.
-   auto DestroySegmentAndOpposite = [&](int32 SegIndex)
+	auto DestroySegmentAndOppositeRun = [&](int32 SegIndex)
 	{
-		TArray<int32> DoorSegIndices;
-		if (!CollectAlongWallSegmentIndices(SegIndex, DoorSegIndices))
-			return; 
-
-		for (int32 Index : DoorSegIndices)
+		TArray<int32> DoorRun;
+		if (!CollectAlongWallSegmentIndices(SegIndex, DoorRun))
 		{
-			if (!WallSegments.IsValidIndex(Index)) continue;
+			return;
+		}
 
-			FDungeonWallSegment& Seg = WallSegments[Index];
-			AWallTile* Actor = Seg.WallActor.Get();
-			if (Actor) Actor->Destroy();
+		for (int32 RunIndex : DoorRun)
+		{
+			if (!WallSegments.IsValidIndex(RunIndex))
+			{
+				continue;
+			}
+
+			FDungeonWallSegment& Seg = WallSegments[RunIndex];
+
+			if (AWallTile* Actor = Seg.WallActor.Get())
+			{
+				Actor->Destroy();
+			}
 			Seg.WallActor = nullptr;
 
-			//Destroy the opposite twin segment on the other side of the wall
-			FIntPoint NeighborCell = GetNeighborCell(Seg);
-			uint8 OppDir = 0;
-			switch ((EWallDir)Seg.Direction)
-			{
-			case EWallDir::Bottom: OppDir = (uint8)EWallDir::Top;    break;
-			case EWallDir::Top:    OppDir = (uint8)EWallDir::Bottom; break;
-			case EWallDir::Left:   OppDir = (uint8)EWallDir::Right;  break;
-			case EWallDir::Right:  OppDir = (uint8)EWallDir::Left;   break;
-			}
+			const FIntPoint NeighborCell = GetNeighborCell(Seg);
+			const uint8 OppositeDir = GetOppositeDirection(Seg.Direction);
 
 			for (int32 j = 0; j < WallSegments.Num(); ++j)
 			{
-				if (j == Index) continue;
-				FDungeonWallSegment& Other = WallSegments[j];
-				if (!Other.WallActor.IsValid()) continue;
+				if (j == RunIndex)
+				{
+					continue;
+				}
 
-				if (Other.Cell == NeighborCell && Other.Direction == OppDir)
+				FDungeonWallSegment& Other = WallSegments[j];
+				if (!Other.WallActor.IsValid())
+				{
+					continue;
+				}
+
+				if (Other.Cell == NeighborCell && Other.Direction == OppositeDir)
 				{
 					if (AWallTile* OtherActor = Other.WallActor.Get())
 					{
@@ -587,207 +1115,206 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 		}
 	};
 
-    // -- Classify interior vs exterior segments --
-    TArray<TArray<int32>> InteriorWallsPerRoom;
-    InteriorWallsPerRoom.SetNum(RoomCount);
-
-    TArray<int32> ExteriorWalls;
-
-    for (int32 i = 0; i < WallSegments.Num(); ++i)
-    {
-        FDungeonWallSegment& Seg = WallSegments[i];
-        if (!Seg.WallActor.IsValid()) continue;
-
-        int32* RoomA = CellToRoomIndex.Find(Seg.Cell);
-        if (!RoomA) continue;
-
-        FIntPoint NeighborCell = GetNeighborCell(Seg);
-        int32* RoomB = CellToRoomIndex.Find(NeighborCell);
-
-        TArray<int32> DummyDoorSegs;
-
-		if (RoomB && *RoomB != *RoomA)
+	auto SpawnDoorActorFromTransform = [&](const FTransform& T)
+	{
+		if (!WallTileClass)
 		{
-			//Only consider this as a candidate if it can fit a full-width door
-			if (CollectAlongWallSegmentIndices(i, DummyDoorSegs))
-			{
-				InteriorWallsPerRoom[*RoomA].Add(i);
-				InteriorWallsPerRoom[*RoomB].Add(i);
-			}
-		}
-		else if (!RoomB)
-		{
-			// Exterior wall, only consider a candidate if it can fit a full-width door
-			if (CollectAlongWallSegmentIndices(i, DummyDoorSegs))
-			{
-				ExteriorWalls.Add(i);
-			}
-		}
-
-    }
-
-    // -- Interior doors. Ensure each room has doors --
-    for (int32 RoomIndex = 0; RoomIndex < RoomCount; ++RoomIndex)
-    {
-        auto& Candidates = InteriorWallsPerRoom[RoomIndex];
-        if (Candidates.Num() == 0) continue;
-
-		const int32 DoorsThisRoom = FMath::RandRange(DoorsPerRoomMin, DoorsPerRoomMax);
-        const int32 NumDoorsForRoom = FMath::Min(DoorsThisRoom, Candidates.Num());
-
-        for (int32 d = 0; d < NumDoorsForRoom; ++d)
-        {
-            const int32 PickIdx   = Rng.RandRange(0, Candidates.Num() - 1);
-            const int32 SegIndex  = Candidates[PickIdx];
-            Candidates.RemoveAtSwap(PickIdx);
-
-            if (!WallSegments.IsValidIndex(SegIndex)) continue;
-            FDungeonWallSegment& Seg = WallSegments[SegIndex];
-            if (!Seg.WallActor.IsValid()) continue;
-
-            const FTransform T = Seg.WallActor->GetActorTransform();
-            DestroySegmentAndOpposite(SegIndex);
-
-            //Door mesh
-            if (DoorMesh)
-            {
-
-				FActorSpawnParameters Params;
-				Params.Owner = this;
-				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-				if (!WallTileClass) continue;
-
-				AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, T.GetLocation(), T.GetRotation().Rotator(), Params);
-
-                if (DoorActor)
-                {
-					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
-                    if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
-                    {
-						DoorComp->SetMobility(EComponentMobility::Movable);
-
-						FVector DoorScale = T.GetScale3D();
-						//Stretch the door mesh to cover all segments
-						DoorScale.X *= DoorSegments;
-                        DoorActor->SetActorScale3D(DoorScale);
-
-						GeneratedDoorActors.Add(DoorActor);
-
-                    }
-                    else
-                    {
-                        DoorActor->Destroy();
-                    }
-                }
-            }
-        }
-
-	    // -- Choose one portal location from exterior wall candidates --
-		TArray<int32> PortalCandidates;
-
-		for (int32 SegIndex : ExteriorWalls)
-		{
-			if (!WallSegments.IsValidIndex(SegIndex)) continue;
-
-			FDungeonWallSegment& Seg = WallSegments[SegIndex];
-			if (!Seg.WallActor.IsValid()) continue;
-
-			PortalCandidates.Add(SegIndex);
-		}
-
-		if (PortalCandidates.Num() == 0)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: No valid exterior wall candidates found for portal."));
 			return;
 		}
 
-		const int32 PickIdx = Rng.RandRange(0, PortalCandidates.Num() - 1);
-		const int32 ChosenSegIndex = PortalCandidates[PickIdx];
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		if (!WallSegments.IsValidIndex(ChosenSegIndex)) return;
+		AWallTile* DoorActor = World->SpawnActor<AWallTile>(
+			WallTileClass,
+			T.GetLocation(),
+			T.GetRotation().Rotator(),
+			Params);
 
-		FDungeonWallSegment& ChosenSeg = WallSegments[ChosenSegIndex];
-		if (!ChosenSeg.WallActor.IsValid()) return;
+		if (!DoorActor)
+		{
+			return;
+		}
 
-		AWallTile* ChosenWallActor = ChosenSeg.WallActor.Get();
-		if (!ChosenWallActor) return;
+		DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-		GeneratedWallActors.Add(ChosenWallActor);
+		UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh();
+		if (!DoorComp)
+		{
+			DoorActor->Destroy();
+			return;
+		}
 
-		const FTransform PortalTransform = ChosenWallActor->GetActorTransform();
+		DoorComp->SetMobility(EComponentMobility::Movable);
 
-		// Record the portal location for DungeonManager
-		AddExteriorDoorWorld(PortalTransform.GetLocation(), PortalTransform.GetRotation().Rotator());
+		FVector DoorScale = T.GetScale3D();
+		DoorScale.X *= DoorSegments;
+		DoorActor->SetActorScale3D(DoorScale);
 
-		// Remove this single wall tile so the portal can occupy the space
-		//ChosenWallActor->Destroy();
-		ChosenSeg.WallActor = nullptr;
+		GeneratedDoorActors.Add(DoorActor);
+	};
+
+	auto ConfigurePortalForWall = [&](AWallTile* WallActor, const FDungeonWallSegment& Seg) -> bool
+	{
+		if (!WallActor)
+		{
+			return false;
+		}
+
+		USceneComponent* PortalFacingRoot = WallActor->GetPortalFacingRoot();
+		USceneComponent* PortalSpawnPoint = WallActor->GetPortalSpawnPoint();
+
+		if (!PortalFacingRoot || !PortalSpawnPoint)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: Chosen wall is missing portal helper components."));
+			return false;
+		}
+
+		PortalFacingRoot->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+		return true;
+	};
+
+	TArray<TArray<int32>> InteriorWallsPerRoom;
+	InteriorWallsPerRoom.SetNum(RoomCount);
+
+	TArray<int32> ExteriorWalls;
+
+	for (int32 i = 0; i < WallSegments.Num(); ++i)
+	{
+		FDungeonWallSegment& Seg = WallSegments[i];
+		if (!Seg.WallActor.IsValid())
+		{
+			continue;
+		}
+
+		int32* RoomA = CellToRoomIndex.Find(Seg.Cell);
+		if (!RoomA)
+		{
+			continue;
+		}
+
+		const FIntPoint NeighborCell = GetNeighborCell(Seg);
+		int32* RoomB = CellToRoomIndex.Find(NeighborCell);
+
+		TArray<int32> DummyDoorSegs;
+		if (!CollectAlongWallSegmentIndices(i, DummyDoorSegs))
+		{
+			continue;
+		}
+
+		if (RoomB && *RoomB != *RoomA)
+		{
+			InteriorWallsPerRoom[*RoomA].Add(i);
+			InteriorWallsPerRoom[*RoomB].Add(i);
+		}
+		else if (!RoomB)
+		{
+			ExteriorWalls.Add(i);
+		}
 	}
 
-    // -- Exterior doors --
-    //ExteriorDoorCount = FMath::Min(ExteriorDoorCount, ExteriorWalls.Num());
-	// ExteriorDoorCount = 0;
+	for (int32 RoomIndex = 0; RoomIndex < RoomCount; ++RoomIndex)
+	{
+		TArray<int32>& Candidates = InteriorWallsPerRoom[RoomIndex];
+		if (Candidates.Num() == 0)
+		{
+			continue;
+		}
 
-    // for (int32 d = 0; d < ExteriorDoorCount && ExteriorWalls.Num() > 0; ++d)
-    // {
-    //     const int32 PickIdx  = Rng.RandRange(0, ExteriorWalls.Num() - 1);
-    //     const int32 SegIndex = ExteriorWalls[PickIdx];
-    //     ExteriorWalls.RemoveAtSwap(PickIdx);
+		const int32 DoorsThisRoom = Rng.RandRange(DoorsPerRoomMin, DoorsPerRoomMax);
+		const int32 NumDoorsForRoom = FMath::Min(DoorsThisRoom, Candidates.Num());
 
-    //     if (!WallSegments.IsValidIndex(SegIndex)) continue;
-    //     FDungeonWallSegment& Seg = WallSegments[SegIndex];
-    //     if (!Seg.WallActor.IsValid()) continue;
+		for (int32 d = 0; d < NumDoorsForRoom && Candidates.Num() > 0; ++d)
+		{
+			const int32 PickIdx = Rng.RandRange(0, Candidates.Num() - 1);
+			const int32 SegIndex = Candidates[PickIdx];
+			Candidates.RemoveAtSwap(PickIdx);
 
-    //     const FTransform WallTransform = Seg.WallActor->GetActorTransform();
-    //     DestroySegmentAndOpposite(SegIndex);
+			if (!WallSegments.IsValidIndex(SegIndex))
+			{
+				continue;
+			}
 
-	// 	//Record the door so DungeonManager can use it
-	// 	// FExteriorDoor DoorInfo;
-	// 	// DoorInfo.Location = T.GetLocation();
-	// 	// DoorInfo.Rotation = T.GetRotation().Rotator();
-	// 	// ExteriorDoors.Add(DoorInfo);
-	// 	//AddExteriorDoorWorld(WallTransform.GetLocation(), WallTransform.GetRotation().Rotator());
+			FDungeonWallSegment& Seg = WallSegments[SegIndex];
+			if (!Seg.WallActor.IsValid())
+			{
+				continue;
+			}
 
-    //     // if (DoorMesh)
-    //     // {
+			const FTransform DoorTransform = Seg.WallActor->GetActorTransform();
 
-	// 	// 	FActorSpawnParameters Params;
-	// 	// 	Params.Owner = this;
-	// 	// 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			DestroySegmentAndOppositeRun(SegIndex);
+			SpawnDoorActorFromTransform(DoorTransform);
+		}
+	}
 
-	// 	// 	if (!WallTileClass) continue;
+	TArray<int32> ValidPortalCandidates;
+	for (int32 SegIndex : ExteriorWalls)
+	{
+		if (!WallSegments.IsValidIndex(SegIndex))
+		{
+			continue;
+		}
 
-	// 	// 	AWallTile* DoorActor = World->SpawnActor<AWallTile>(WallTileClass, WallTransform.GetLocation(), WallTransform.GetRotation().Rotator(), Params);
-			
-    //     //     if (DoorActor)
-    //     //     {
-	// 	// 		DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+		const FDungeonWallSegment& Seg = WallSegments[SegIndex];
+		if (!Seg.WallActor.IsValid())
+		{
+			continue;
+		}
 
-    //     //         if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
-    //     //         {
-	// 	// 			DoorComp->SetMobility(EComponentMobility::Movable);
+		ValidPortalCandidates.Add(SegIndex);
+	}
 
-	// 	// 			FVector DoorScale = WallTransform.GetScale3D();
-	// 	// 			//Stretch the door mesh to cover all segments
-	// 	// 			DoorScale.X *= DoorSegments;
+	if (ValidPortalCandidates.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: No valid exterior wall candidates found for portal."));
+		return;
+	}
 
-	// 	// 			DoorActor->SetActorScale3D(DoorScale);
+	const int32 PortalPickIdx = Rng.RandRange(0, ValidPortalCandidates.Num() - 1);
+	const int32 ChosenSegIndex = ValidPortalCandidates[PortalPickIdx];
 
-	// 	// 			GeneratedDoorActors.Add(DoorActor);
-                    
-    //     //         }
-    //     //         else
-    //     //         {
-    //     //             DoorActor->Destroy();
-    //     //         }
-    //     //     }
+	if (!WallSegments.IsValidIndex(ChosenSegIndex))
+	{
+		return;
+	}
 
-	// 	// 	UE_LOG(LogTemp, Warning, TEXT(" created %d exterior doors"), ExteriorDoors.Num());
-    //     // }
-    // }
+	FDungeonWallSegment& ChosenSeg = WallSegments[ChosenSegIndex];
+	if (!ChosenSeg.WallActor.IsValid())
+	{
+		return;
+	}
+
+	AWallTile* ChosenWallActor = ChosenSeg.WallActor.Get();
+	if (!ChosenWallActor)
+	{
+		return;
+	}
+
+	if (!ConfigurePortalForWall(ChosenWallActor, ChosenSeg))
+	{
+		return;
+	}
+
+	USceneComponent* PortalSpawnPoint = ChosenWallActor->GetPortalSpawnPoint();
+	if (!PortalSpawnPoint)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: Chosen wall has no PortalSpawnPoint."));
+		return;
+	}
+
+	GeneratedWallActors.Add(ChosenWallActor);
+	AddExteriorDoorWorld(
+		PortalSpawnPoint->GetComponentLocation(),
+		PortalSpawnPoint->GetComponentRotation());
+
+	UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: Portal wall chosen: %s  SpawnLoc=%s  SpawnRot=%s"),
+		*ChosenWallActor->GetName(),
+		*PortalSpawnPoint->GetComponentLocation().ToString(),
+		*PortalSpawnPoint->GetComponentRotation().ToString());
 }
+
 
 // Called every frame
 void ABSP_FloorGenerator::Tick(float DeltaTime)

@@ -10,8 +10,11 @@ AWallTile::AWallTile()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	PortalFacingRoot = CreateDefaultSubobject<USceneComponent>(TEXT("PortalFacingRoot"));
+	PortalFacingRoot->SetupAttachment(RootComponent);
+
 	PortalSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("PortalSpawnPoint"));
-	PortalSpawnPoint->SetupAttachment(RootComponent);
+	PortalSpawnPoint->SetupAttachment(PortalFacingRoot);
 
 }
 
@@ -28,10 +31,3 @@ void AWallTile::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
-
-USceneComponent* AWallTile::GetPortalSpawnPoint() const
-{
-	return PortalSpawnPoint;
-}
-
-
