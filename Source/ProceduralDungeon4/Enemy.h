@@ -12,7 +12,7 @@
 
 class UHealthBarComponent;
 class UPawnSensingComponent;
-class ATreasure;
+class AItem;
 
 USTRUCT(BlueprintType)
 struct FEnemyConfig
@@ -29,7 +29,7 @@ struct FEnemyConfig
     float WisdomAmount = 10.f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Dungeon)
-    TSubclassOf<ATreasure> InitTreasureClass;
+    TSubclassOf<AItem> InitTreasureClass;
 
 	//WeaponDamage
 
@@ -62,7 +62,8 @@ public:
 	void SetMaxHealth(int SelectedMaxHealth);
 	void SetWisdomAmount(int SelectedWisdomAmount);
 	void SetHealthPickupAmount(int SelectedHealthPickupAmount);
-	void SetTreasureClass(TSubclassOf<ATreasure> SelectedTreasureClass);
+	void SetTreasureClass(TSubclassOf<AItem> SelectedTreasureClass);
+	void AddTreasureToRewardTable();
 
 protected:
 
@@ -79,6 +80,12 @@ protected:
 	/* </ABaseCharacter> */
 
 	UFUNCTION(BlueprintCallable)
+	void SpawnReward();
+
+	UFUNCTION(BlueprintCallable)
+	void SpawnTreasure();
+
+	UFUNCTION(BlueprintCallable)
     void SpawnWisdom();
 
 	UFUNCTION(BlueprintCallable)
@@ -88,9 +95,6 @@ protected:
 	void RagdollCharacter();
 
 	EWeaponType WeaponType;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TSubclassOf<ATreasure> TreasureClass;
 
 	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly
 	// TSubclassOf<AHealthPickup> HealthPickupClass;
@@ -107,6 +111,20 @@ protected:
 	FTimerHandle PatrolStartRetryHandle;
 
 	virtual void SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled) override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Procedural Dungeon")
+	TArray<TSubclassOf<AItem>> RewardTable;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Procedural Dungeon")
+	TSubclassOf<AItem> TreasureClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Procedural Dungeon")
+	TSubclassOf<AItem> WisdomClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Procedural Dungeon")
+	TSubclassOf<AItem> HealthPickupClass;
+
+	bool bDeathHandled = false;
 
 private:
 	/* AI Behavior */
@@ -200,9 +218,6 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	float DeathLifeSpan = 8.f;
-
-	UPROPERTY(EditAnywhere, Category = "Combat")
-	TSubclassOf<class AWisdom> WisdomClass;
 
 public:
 	FORCEINLINE AWeapon* GetEquippedWeapon() { return EquippedWeapon; }

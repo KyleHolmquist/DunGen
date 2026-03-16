@@ -1323,3 +1323,69 @@ void ABSP_FloorGenerator::Tick(float DeltaTime)
 
 }
 
+void ABSP_FloorGenerator::BuildCeiling()
+{
+	if (!FloorTileClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator - FloorTileClass is null"));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	const float BaseMeshSize = 100.f;
+	const float CeilingZ = FloorZ + WallHeight;
+
+	for (int32 RoomIndex = 0; RoomIndex < LeafRegions.Num(); ++RoomIndex)
+	{
+		const FBSPLeaf& Leaf = LeafRegions[RoomIndex];
+
+		const int32 LeafW = Leaf.Width();
+		const int32 LeafH = Leaf.Height();
+		if (LeafW <= 0 || LeafH <= 0) continue;
+
+		int32 PadLeft   = FMath::Clamp(RoomPaddingMin, 0, LeafW - 1);
+		int32 PadRight  = FMath::Clamp(RoomPaddingMin, 0, LeafW - 1 - PadLeft);
+		int32 PadBottom = FMath::Clamp(RoomPaddingMin, 0, LeafH - 1);
+		int32 PadTop    = FMath::Clamp(RoomPaddingMin, 0, LeafH - 1 - PadBottom);
+
+		const int32 RoomMinX = Leaf.Min.X + PadLeft;
+		const int32 RoomMaxX = Leaf.Max.X - PadRight;
+		const int32 RoomMinY = Leaf.Min.Y + PadBottom;
+		const int32 RoomMaxY = Leaf.Max.Y - PadTop;
+
+		const int32 RoomW = RoomMaxX - RoomMinX;
+		const int32 RoomH = RoomMaxY - RoomMinY;
+		if (RoomW <= 0 || RoomH <= 0) continue;
+
+		const float RoomWorldWidth  = RoomW * TileSize;
+		const float RoomWorldHeight = RoomH * TileSize;
+
+		const FVector RoomCenter(
+			(RoomMinX + RoomW * 0.5f) * TileSize,
+			(RoomMinY + RoomH * 0.5f) * TileSize,
+			CeilingZ);
+
+		const FVector CeilingLocation = GetActorLocation() + RoomCenter;
+		const FVector CeilingScale(RoomWorldWidth / BaseMeshSize, RoomWorldHeight / BaseMeshSize, 1.f);
+
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		AFloorTile* CeilingActor = World->SpawnActor<AFloorTile>(FloorTileClass, CeilingLocation, FRotator(180.f, 0.f, 0.f), Params);
+		if (!CeilingActor) continue;
+
+		if (UStaticMeshComponent* MeshComp = CeilingActor->GetItemMesh())
+		{
+			MeshComp->SetMobility(EComponentMobility::Movable);
+			CeilingActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+			CeilingActor->SetActorScale3D(CeilingScale);
+		}
+		else
+		{
+			CeilingActor->Destroy();
+		}
+	}
+}

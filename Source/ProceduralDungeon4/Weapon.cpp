@@ -59,6 +59,7 @@ void AWeapon::BoxTrace(FHitResult& BoxHit)
 {
 	const FVector Start = BoxTraceStart->GetComponentLocation();
 	const FVector End = BoxTraceEnd->GetComponentLocation();
+
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(this);
 	
@@ -84,7 +85,12 @@ void AWeapon::BoxTrace(FHitResult& BoxHit)
 		FColor::Green,
 		5.f
 		);
-	IgnoreActors.AddUnique(BoxHit.GetActor());
+	
+	if (AActor* HitActor = BoxHit.GetActor())
+	{
+		IgnoreActors.AddUnique(BoxHit.GetActor());
+
+	}
 }
 
 void AWeapon::DeactivateEmbers()

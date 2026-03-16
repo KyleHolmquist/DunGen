@@ -202,6 +202,8 @@ protected:
 	AFloorGeneratorBase* SpawnDungeonModule();
 	void PopulateDungeon();
 	bool TryPopRandomEmptyLocation(FVector& OutLocation);
+	void RefreshEmptySpaceData();
+	bool TryPopRandomEmptySpaceWorld(FVector& OutLocation);
 	void SpawnBreakables();
 	void SpawnProps();
 	void SpawnEnemies();

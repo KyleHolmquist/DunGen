@@ -34,11 +34,6 @@ void ABreakableActor::BeginPlay()
 
 	RewardTable.Reset();
 
-	if (TreasureClass)
-	{
-		RewardTable.Add(TreasureClass);
-	}
-
 	if (WisdomClass)
 	{
 		RewardTable.Add(WisdomClass);
@@ -99,7 +94,9 @@ void ABreakableActor::GetHit_Implementation(const FVector& ImpactPoint, AActor* 
 }
 
 
-void ABreakableActor::SetTreasureClass(TSubclassOf<ATreasure> SelectedTreasureClass )
+void ABreakableActor::SetTreasureClass(TSubclassOf<AItem> SelectedTreasureClass )
 {
+	UE_LOG(LogTemp, Warning, TEXT("We're adding treasure classes"));
 	TreasureClass = SelectedTreasureClass;
+	RewardTable.Add(TreasureClass);
 }

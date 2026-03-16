@@ -134,6 +134,9 @@ void AEnemy::GetHit_Implementation(const FVector& ImpactPoint, AActor* Hitter)
 }
 void AEnemy::Die_Implementation()
 {
+    if (bDeathHandled) return;
+    bDeathHandled = true;
+
     Super::Die_Implementation();
     EnemyState = EEnemyState::EES_Dead;
     ClearAttackTimer();
@@ -142,7 +145,38 @@ void AEnemy::Die_Implementation()
     SetLifeSpan(DeathLifeSpan);
     GetCharacterMovement()->bOrientRotationToMovement = false;
     SetWeaponCollisionEnabled(ECollisionEnabled::NoCollision);
-    SpawnWisdom();
+    SpawnReward();
+}
+
+void AEnemy::SpawnReward()
+{
+    if (RewardTable.Num() < 1) return;
+
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    int Selection = FMath::RandRange(0, RewardTable.Num() - 1);
+    FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 100.f);
+    FRotator SpawnRotation = GetActorRotation();
+    AItem* SpawnedReward = World->SpawnActor<AItem>(RewardTable[Selection], SpawnLocation, SpawnRotation);
+    if (SpawnedReward)
+    {
+        SpawnedReward->SetOwner(this);
+    }
+}
+
+void AEnemy::SpawnTreasure()
+{
+    UWorld* World = GetWorld();
+    if (World && TreasureClass)
+    {
+        const FVector SpawnLocation = GetActorLocation();
+        AItem* SpawnedTreasure = World->SpawnActor<AItem>(TreasureClass, SpawnLocation, GetActorRotation());
+        if (SpawnedTreasure)
+        {
+            SpawnedTreasure->SetOwner(this);
+        }
+    }
 }
 void AEnemy::SpawnWisdom()
 {
@@ -150,10 +184,9 @@ void AEnemy::SpawnWisdom()
     if (World && WisdomClass && Attributes)
     {
         const FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 125.f);
-        AWisdom* SpawnedWisdom = World->SpawnActor<AWisdom>(WisdomClass, SpawnLocation, GetActorRotation());
+        AItem* SpawnedWisdom = World->SpawnActor<AItem>(WisdomClass, SpawnLocation, GetActorRotation());
         if (SpawnedWisdom)
         {
-            SpawnedWisdom->SetWisdomAmount(Attributes->GetWisdom());
             SpawnedWisdom->SetOwner(this);
         }
     }
@@ -162,16 +195,15 @@ void AEnemy::SpawnWisdom()
 void AEnemy::SpawnHealthPickup()
 {
     UWorld *World = GetWorld();
-    // if (World && HealthPickupClass && EnemyConfig)
-    // {
-    //     const FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 125.f);
-    //     AHealthPickup* SpawnedHealth = World->SpawnActor<AHealthPickup>(HealthPickupClass, SpawnLocation, GetActorRotation());
-    //     if (SpawnedHealth)
-    //     {
-    //         SpawnedHealth->SetHealth(Attributes->GetHealth());
-    //         SpawnedHealth->SetOwner(this);
-    //     }
-    // }
+    if (World && HealthPickupClass)
+    {
+        const FVector SpawnLocation = GetActorLocation();
+        AHealthPickup* SpawnedHealth = World->SpawnActor<AHealthPickup>(HealthPickupClass, SpawnLocation, GetActorRotation());
+        if (SpawnedHealth)
+        {
+            SpawnedHealth->SetOwner(this);
+        }
+    }
 }
 void AEnemy::Attack()
 {
@@ -241,6 +273,18 @@ void AEnemy::InitializeEnemy()
     {
         WeaponType = EquippedWeapon->GetWeaponType();
     }
+
+    if (WisdomClass)
+    {
+        RewardTable.Add(WisdomClass);
+    }
+
+    if (HealthPickupClass)
+    {
+        RewardTable.Add(WisdomClass);
+    }
+
+    
 }
 void AEnemy::CheckPatrolTarget()
 {
@@ -470,8 +514,6 @@ void AEnemy::SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled)
     }
 }
 
-
-
 void AEnemy::SetMaxHealth(int SelectedMaxHealth)
 {
     if (!Attributes) return;
@@ -487,7 +529,15 @@ void AEnemy::SetHealthPickupAmount(int SelectedHealthPickupAmount)
     if (!Attributes) return;
     Attributes->InitHealth(SelectedHealthPickupAmount);
 }
-void AEnemy::SetTreasureClass(TSubclassOf<ATreasure> SelectedTreasureClass)
+void AEnemy::SetTreasureClass(TSubclassOf<AItem> SelectedTreasureClass)
 {
     TreasureClass = SelectedTreasureClass;
+}
+
+void AEnemy::AddTreasureToRewardTable()
+{
+    if (TreasureClass)
+    {
+        RewardTable.Add(TreasureClass);
+    }
 }

@@ -114,3 +114,8 @@ void AFloorGeneratorBase::SetDungeonManager(ADungeonManager* OwningDungeonManage
 {
 	DungeonManager = OwningDungeonManager;
 }
+
+void AFloorGeneratorBase::BuildCeiling()
+{
+	//Base version does nothing. Derived classes override.
+}

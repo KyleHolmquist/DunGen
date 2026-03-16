@@ -39,16 +39,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	class UCapsuleComponent* Capsule;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Procedural Dungeon")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Procedural Dungeon")
 	TArray<TSubclassOf<AItem>> RewardTable;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Procedural Dungeon")
 	TSubclassOf<AItem> TreasureClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Procedural Dungeon")
 	TSubclassOf<AItem> WisdomClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Procedural Dungeon")
 	TSubclassOf<AItem> HealthPickupClass;
 
 	UFUNCTION()
@@ -65,7 +65,7 @@ private:
 public:
 
 	UFUNCTION()
-	void SetTreasureClass(TSubclassOf<ATreasure> SelectedTreasureClass );
+	void SetTreasureClass(TSubclassOf<AItem> SelectedTreasureClass );
 
 	FORCEINLINE TArray<EDungeonTheme> GetThemes() const { return DungeonThemes; }
 

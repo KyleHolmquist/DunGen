@@ -47,7 +47,7 @@ protected:
     void ExecuteGetHit(FHitResult &BoxHit);
 
 private:
-	 void BoxTrace(FHitResult &BoxHit);
+	void BoxTrace(FHitResult &BoxHit);
 
     UPROPERTY(EditAnywhere, Category = "Weapon Properties")
     FVector BoxTraceExtent = FVector(5.f);

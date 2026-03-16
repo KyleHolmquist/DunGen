@@ -98,6 +98,11 @@ void ADomeara::StartDialogue()
     bInDialogue = true;
     CurrentDialogueIndex = 0;
     ShowCurrentDialogueLine();
+    if (GreetingsAnim)
+    {
+        GetMesh()->PlayAnimation(GreetingsAnim, false);
+    }
+    
 }
 
 void ADomeara::AdvanceDialogue()
@@ -113,6 +118,11 @@ void ADomeara::AdvanceDialogue()
     }
 
     ShowCurrentDialogueLine();
+    if (TalkingAnims.Num() > 0)
+    {
+        int Selection = FMath::RandRange(0, TalkingAnims.Num() - 1);
+        GetMesh()->PlayAnimation(TalkingAnims[Selection], false);
+    }
 }
 
 void ADomeara::EndDialogue()
@@ -137,8 +147,8 @@ void ADomeara::BuildDialogueLines()
     ActiveDialogueLines.Empty();
 
     const FString PlayerName = TEXT("Airsto");
-    const FString SelectedThemeText = DungeonManager->GetSelectedThemeText();
-    const FString SelectedTreasureText = DungeonManager->GetSelectedTreasureText();
+    FString SelectedThemeText = DungeonManager->GetSelectedThemeText();
+    FString SelectedTreasureText = DungeonManager->GetSelectedTreasureText();
 
     if (!DungeonManager)
     {
@@ -160,7 +170,13 @@ void ADomeara::BuildDialogueLines()
         return;
     }
 
-    const FText QuestLine = GenerateQuestText
+    FText GreetingsLine = GenerateGreetingsText
+    (
+        QuestAdjectivesTable,
+        PlayerName
+    );
+
+    FText QuestLine = GenerateQuestText
     (
         QuestAdjectivesTable,
         PlayerName,
@@ -168,7 +184,7 @@ void ADomeara::BuildDialogueLines()
         SelectedTreasureText
     );
 
-    ActiveDialogueLines.Add(FText::FromString(TEXT("Greetings, Airsto.")));
+    ActiveDialogueLines.Add(GreetingsLine);
     ActiveDialogueLines.Add(QuestLine);
     bHasGivenQuest = true;
 }
@@ -226,12 +242,24 @@ bool ADomeara::GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAd
 	return true;
 }
 
-FText ADomeara::GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName,const FString& SelectedThemeName, const FString& SelectedTreasureName)
+FText ADomeara::GenerateGreetingsText(const UDataTable* AdjectiveTable, const FString& PlayerName)
 {
-	FString GreetingsWord, MustWord, TravelWord, PlaceAdj, CollectWord, AsManyWord, ItemAdjA, ItemAdjB, PossibleWord;
+    FString GreetingsWord;
+
+    //Pull from Greetings Row
+	GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::GreetingsWord, GreetingsWord);
+
+    FString Template =
+        TEXT("{GreetingsWord}, {PlayerName}.");
+
+        return FText::FromString(Template);
+}
+
+FText ADomeara::GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName, FString& SelectedThemeName, FString& SelectedTreasureName)
+{
+	FString MustWord, TravelWord, PlaceAdj, CollectWord, AsManyWord, ItemAdjA, ItemAdjB, PossibleWord;
 
 	//Pull from different random rows
-	GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::GreetingsWord, GreetingsWord);
     GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::MustWord, MustWord);
     GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::TravelWord, TravelWord);
     GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::PlaceAdjective, PlaceAdj);
@@ -242,9 +270,8 @@ FText ADomeara::GenerateQuestText(const UDataTable* AdjectiveTable, const FStrin
     GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::PossibleWord, PossibleWord);
 
 	FString Template = 
-		TEXT("{GreetingsWord}, {PlayerName}! {MustWord} {TravelWord} the {ThemeName} of {PlaceAdj} to {CollectWord} {AsManyWord} {ItemAdjA} {TreasureName}s of {ItemAdjB} {PossibleWord}.");
+		TEXT("You {MustWord} {TravelWord} the {ThemeName} of {PlaceAdj} to {CollectWord} {AsManyWord} {ItemAdjA} {TreasureName}s of {ItemAdjB} {PossibleWord}.");
 
-		Template = Template.Replace(TEXT("{GreetingsWord}"), *GreetingsWord);
 		Template = Template.Replace(TEXT("{PlayerName}"), *PlayerName);
 		Template = Template.Replace(TEXT("{MustWord}"), *MustWord);
 		Template = Template.Replace(TEXT("{TravelWord}"), *TravelWord);

@@ -93,6 +93,8 @@ public:
     UFUNCTION(BlueprintCallable, Category=Dungeon)
     virtual bool IsEmpty(int32 X, int32 Y) const;
     
+    UFUNCTION(BlueprintCallable)
+    virtual void BuildCeiling();
 
     void InitMapSize(int32 InWidth, int32 InHeight)
     {

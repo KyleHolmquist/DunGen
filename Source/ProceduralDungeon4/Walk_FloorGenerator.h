@@ -78,10 +78,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Doors")
 	UStaticMesh* DoorMesh = nullptr;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
 private:
 	//true = wall, false= floor
 	TArray<bool> Map;
@@ -102,5 +98,11 @@ private:
 	bool IsValidPortalCandidate(int32 WallX, int32 WallY) const;
 
 	FRotator GetPortalFacingRotation(int32 WallX, int32 WallY) const;
+
+public:	
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+	virtual void BuildCeiling() override;
 
 };

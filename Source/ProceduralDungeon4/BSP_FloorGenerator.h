@@ -149,4 +149,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	virtual void BuildCeiling() override;
+
+	//Getter for the individual walking cells
+	const TMap<FIntPoint, int32>& GetCellToRoomIndex() const { return CellToRoomIndex; }
+
 };

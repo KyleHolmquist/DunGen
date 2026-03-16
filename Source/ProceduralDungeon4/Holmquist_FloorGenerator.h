@@ -121,6 +121,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	virtual void BuildCeiling() override;
+
 	bool GetPortalFacingRotation(const AWallTile* InWallActor, FRotator& OutRotation) const;
 
 };

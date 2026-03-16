@@ -546,6 +546,46 @@ bool AHolmquist_FloorGenerator::GetPortalFacingRotation(const AWallTile* InWallA
 	return false;
 }
 
+void AHolmquist_FloorGenerator::BuildCeiling()
+{
+	UWorld* World = GetWorld();
+	if (!World || !FloorTileClass) return;
+
+	const float BaseSize = 100.f;
+	const float CeilingZ = FloorZ + WallHeight;
+
+	for (int32 y = 0; y < MapHeight; ++y)
+	{
+		for (int32 x = 0; x < MapWidth; ++x)
+		{
+			const bool bIsFloor = Grid[Index(x, y)];
+			if (!bIsFloor) continue;
+
+			const FVector Pos = GetActorLocation() + FVector(x * TileSize, y * TileSize, CeilingZ);
+
+			FActorSpawnParameters Params;
+			Params.Owner = this;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			AFloorTile* CeilingActor = World->SpawnActor<AFloorTile>(FloorTileClass, Pos, FRotator(180.f, 0.f, 0.f), Params);
+			if (!CeilingActor) continue;
+
+			if (UStaticMeshComponent* MeshComp = CeilingActor->GetItemMesh())
+			{
+				MeshComp->SetMobility(EComponentMobility::Movable);
+				CeilingActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
+				const float Scale = TileSize / BaseSize;
+				CeilingActor->SetActorScale3D(FVector(Scale, Scale, 1.f));
+			}
+			else
+			{
+				CeilingActor->Destroy();
+			}
+		}
+	}
+}
+
 //Do a dice-roll style walk where a NWSE direction is chosen by rand 1-4
 //Decide (through randomness or testing) how many generations to go
 //Walk the dice roll steps in the direction chosen, placing a tile for each step

@@ -790,6 +790,63 @@ bool ADungeonManager::TryPopRandomEmptyLocation(FVector& OutLocation)
 	return true;
 }
 
+void ADungeonManager::RefreshEmptySpaceData()
+{
+	EmptySpaces.Reset();
+	EmptyLocations.Reset();
+
+	if (!DungeonModule) return;
+
+	//For BSP, build EmptySpaces from the interior grid cells, then convert to world locations
+	if (ABSP_FloorGenerator* BSPGen = Cast<ABSP_FloorGenerator>(DungeonModule))
+	{
+		const TMap<FIntPoint, int32>& CellMap = BSPGen->GetCellToRoomIndex();
+
+		EmptySpaces.Reserve(CellMap.Num());
+		EmptyLocations.Reserve(CellMap.Num());
+
+		for (const TPair<FIntPoint, int32>& Pair : CellMap)
+		{
+			const FIntPoint Cell = Pair.Key;
+			EmptySpaces.Add(Cell);
+
+			const FVector WorldLocation
+			(
+				(Cell.X + 0.5f) * 200.f,
+				(Cell.Y + 0.5f) * 200.f,
+				0.f
+			);
+
+			EmptyLocations.Add(WorldLocation);
+		}
+
+		return;
+	}
+
+	//IF not BSP, keep existing behavior
+	EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
+}
+
+bool ADungeonManager::TryPopRandomEmptySpaceWorld(FVector& OutLocation)
+{
+	if (EmptyLocations.Num() == 0)
+	{
+		return false;
+	}
+
+	const int32 Index = FMath::RandRange(0, EmptyLocations.Num() - 1);
+	OutLocation = EmptyLocations[Index];
+	EmptyLocations.RemoveAtSwap(Index);
+
+	//Keep EmptySpaces in sync when BSP is active
+	if (EmptySpaces.IsValidIndex(Index))
+	{
+		EmptySpaces.RemoveAtSwap(Index);
+	}
+
+	return true;
+}
+
 void ADungeonManager::SpawnBreakables()
 {
 	//Check to see if the EmptyLocations array is empty
@@ -804,7 +861,7 @@ void ADungeonManager::SpawnBreakables()
 	for (int i = BreakableQuantityInLevel; i > 0; --i)
 	{
 		FVector Cell;
-		if (!TryPopRandomEmptyLocation(Cell))
+		if (!TryPopRandomEmptySpaceWorld(Cell))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("DungeonManager - ran out of EmptyLocations while spawning breakables."));
 			return;
@@ -856,14 +913,14 @@ void ADungeonManager::SpawnProps()
 	for (int i = PropQuantityInLevel; i > 0; --i)
 	{
 		FVector Cell;
-		if (!TryPopRandomEmptyLocation(Cell))
+		if (!TryPopRandomEmptySpaceWorld(Cell))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("DungeonManager - ran out of EmptyLocations while spawning props."));
 			return;
 		}
 
 		//Move the Breakable up a bit so it doesn't fall through the floor
-		const FVector Location = FVector(Cell.X, Cell.Y, Cell.Z + 10.f);
+		const FVector Location = FVector(Cell.X, Cell.Y, Cell.Z + 0.01f);
 		//Create a random float for the object's z rotation
 		float RandomYaw = FMath::RandRange(0.f, 360.f);
 		//Create the Rotator
@@ -915,7 +972,7 @@ void ADungeonManager::SpawnEnemies()
 		EnemyConfig.WisdomAmount = SetEnemyWisdom();
 
 		FVector Cell;
-		if (!TryPopRandomEmptyLocation(Cell))
+		if (!TryPopRandomEmptySpaceWorld(Cell))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("DungeonManager - ran out of EmptyLocations while spawning enemies."));
 			return;
@@ -953,6 +1010,12 @@ void ADungeonManager::SpawnEnemies()
 		//SetEnemyPatrolPoints(Enemy);
 		SetEnemyAttackTimer(Enemy);
 		SetEnemyWeaponDamage(Enemy);
+		if (SelectedTreasureClass)
+		{
+			Enemy->SetTreasureClass((SelectedTreasureClass));
+			Enemy->AddTreasureToRewardTable();
+		}
+		
 		SpawnedEnemies.Add(Enemy);
 
 		//Raise the enemy up a bit so the capsule rests on the floor plane
@@ -986,7 +1049,7 @@ void ADungeonManager::SetNumPropsInLevel()
 
 void ADungeonManager::SetNumEnemiesInLevel()
 {
-	EnemyQuantityInLevel = 1+ (TotalEmptySpaces / 50) + (AccruedWisdom / 10);
+	EnemyQuantityInLevel = 1 + (TotalEmptySpaces / 100) + (AccruedWisdom / 10);
 }
 
 int ADungeonManager::SetEnemyHealth()
@@ -1319,10 +1382,22 @@ void ADungeonManager::SpawnNewDungeon()
 		return;
 	}
 	
+	//Build the dungeon
 	DungeonModule->SetFloorTile(SelectedFloorTileClass);
 	DungeonModule->SetWallTile(SelectedWallTileClass);
 	DungeonModule->GenerateModule();
 
+	//Spawn the ceiling
+	const bool bThemeUsesCeiling = 
+		DungeonTheme != EDungeonTheme::EDT_Fort &&
+		DungeonTheme != EDungeonTheme::EDT_City_Streets;
+
+	if (bThemeUsesCeiling)
+	{
+		DungeonModule->BuildCeiling();
+	}
+
+	//Get portal candidates
 	PortalWallCandidates = DungeonModule->GetGeneratedWallActors();
 
 	//Remove dead/null pointers
@@ -1334,7 +1409,7 @@ void ADungeonManager::SpawnNewDungeon()
 	);
 
 		//Populate empty floor locations
-		EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
+		RefreshEmptySpaceData();
 
 		if (PortalWallCandidates.Num() > 0)
 		{
@@ -1343,6 +1418,7 @@ void ADungeonManager::SpawnNewDungeon()
 
 			if (IsValid(SelectedWallActor))
 			{
+				//Get the portal's spawn point from the selected wall actor
 				USceneComponent* PortalSpawnPoint = SelectedWallActor->GetPortalSpawnPoint();
 
 				if (!IsValid(PortalSpawnPoint))
@@ -1354,7 +1430,7 @@ void ADungeonManager::SpawnNewDungeon()
 					FVector PortalSpawnLocation = PortalSpawnPoint->GetComponentLocation();
 					FRotator PortalRotation = PortalSpawnPoint->GetComponentRotation();
 
-					// Optional Holmquist override if you still want it
+					// Override for Holmquist generator
 					if (AHolmquist_FloorGenerator* HolmquistGen = Cast<AHolmquist_FloorGenerator>(DungeonModule))
 					{
 						FRotator HolmquistRotation = PortalRotation;
@@ -1364,6 +1440,7 @@ void ADungeonManager::SpawnNewDungeon()
 						}
 					}
 
+					//Override for BSP Generator
 					APortal* AwayPortal = PortalManager->SpawnAwayPortal(PortalSpawnLocation, PortalRotation);
 					if (ABSP_FloorGenerator* BSPGen = Cast<ABSP_FloorGenerator>(DungeonModule))
 					{
@@ -1374,6 +1451,7 @@ void ADungeonManager::SpawnNewDungeon()
 						}
 					}
 
+					//Attach the AwayPortal to the selected wall actor
 					if (IsValid(AwayPortal))
 					{
 						AwayPortal->AttachToActor(SelectedWallActor, FAttachmentTransformRules::KeepWorldTransform);
@@ -1392,7 +1470,8 @@ void ADungeonManager::SpawnNewDungeon()
 			UE_LOG(LogTemp, Warning, TEXT("DungeonManager::SpawnNewDungeon - PortalWallCandidates is empty."));
 		}
 	
-	EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
+	//EmptyLocations = DungeonModule->GetGeneratedEmptyLocations();
+	RefreshEmptySpaceData();
 	PopulateDungeon();
 
 	//Start async wait until both modules finish initializing

@@ -482,3 +482,43 @@ FRotator AWalk_FloorGenerator::GetPortalFacingRotation(int32 WallX, int32 WallY)
 
 	return FRotator::ZeroRotator;
 }
+
+void AWalk_FloorGenerator::BuildCeiling()
+{
+	UWorld* World = GetWorld();
+	if (!World || !FloorTileClass) return;
+
+	const float BasePlaneSize = 100.f;
+	const float CeilingZ = FloorZ + WallHeight;
+
+	for (int32 y = 0; y < MapHeight; ++y)
+	{
+		for (int32 x = 0; x < MapWidth; ++x)
+		{
+			const bool bIsWall = Map[Index(x, y)];
+			if (bIsWall) continue;
+
+			const FVector Pos = GetActorLocation() + FVector(x * TileSize, y * TileSize, CeilingZ);
+
+			FActorSpawnParameters Params;
+			Params.Owner = this;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			AFloorTile* CeilingActor = World->SpawnActor<AFloorTile>(FloorTileClass, Pos, FRotator(180.f, 0.f, 0.f), Params);
+			if (!CeilingActor) continue;
+
+			if (UStaticMeshComponent* MeshComp = CeilingActor->GetItemMesh())
+			{
+				MeshComp->SetMobility(EComponentMobility::Movable);
+				CeilingActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+
+				const float Scale = TileSize / BasePlaneSize;
+				CeilingActor->SetActorScale3D(FVector(Scale, Scale, 1.f));
+			}
+			else
+			{
+				CeilingActor->Destroy();
+			}
+		}
+	}
+}

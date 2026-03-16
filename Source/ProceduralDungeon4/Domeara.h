@@ -12,6 +12,7 @@ class USphereComponent;
 class UDataTable;
 class ADungeonManager;
 struct FQuestAdjectiveRow;
+class UAnimationAsset;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API ADomeara : public ABaseCharacter, public IDialogueInterface
@@ -62,9 +63,17 @@ protected:
 	ADungeonManager* DungeonManager;
 
 	bool GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue);
-	FText GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName,const FString& SelectedThemeName, const FString& SelectedTreasureName);
+	FText GenerateGreetingsText(const UDataTable* AdjectiveTable, const FString& PlayerName);
+	FText GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName, FString& SelectedThemeName, FString& SelectedTreasureName);
 
 	//Dialogue Bools
 	bool bHasGivenQuest = false;
+
+	//Animations
+	UPROPERTY(EditAnywhere, Category=Animation)
+	UAnimationAsset* GreetingsAnim;
+	
+	UPROPERTY(EditAnywhere, Category=Animation)
+	TArray<UAnimationAsset*> TalkingAnims;
 	
 };
