@@ -75,8 +75,6 @@ void ADomeara::Speak()
     {
         AdvanceDialogue();
     }
-
-
 }
 
 void ADomeara::StartDialogue()
@@ -144,11 +142,6 @@ void ADomeara::EndDialogue()
 
 void ADomeara::BuildDialogueLines()
 {
-    ActiveDialogueLines.Empty();
-
-    FString PlayerName = TEXT("Airsto");
-    FString SelectedThemeText = DungeonManager->GetSelectedThemeText();
-    FString SelectedTreasureText = DungeonManager->GetSelectedTreasureText();
 
     if (!DungeonManager)
     {
@@ -156,6 +149,11 @@ void ADomeara::BuildDialogueLines()
         return;
     }
 
+    ActiveDialogueLines.Empty();
+
+    FString PlayerName = TEXT("Airsto");
+    FString SelectedThemeText = DungeonManager->GetSelectedThemeText();
+    FString SelectedTreasureText = DungeonManager->GetSelectedTreasureText();
     if (!bFirstMeeting)
     {
         FText GreetingsLine = GenerateGreetingsText
@@ -186,6 +184,38 @@ void ADomeara::BuildDialogueLines()
         bFirstMeeting = false;
     }
 
+    if (!DungeonManager->HasPlayerEnteredPortal() && bHasGivenQuest)
+    {
+        ActiveDialogueLines.Add
+        (
+            FText::Format
+            (
+                FText::FromString("You must travel through the portal to the {0} to retrieve the {1}."),
+                FText::FromString(SelectedThemeText),
+                FText::FromString(SelectedTreasureText)
+            )
+        ); 
+        return;
+    }
+
+    if (DungeonManager->HasPlayerEnteredPortal())
+    {
+        //I'm glad to see you alive, {PlayerName}. ETC
+        //Here's WisdomAmount for the treasurenumber treasuretext you brought back from the placetext.
+        //Are you ready for your next assignment?
+
+        //If yes
+        //if (!DungeonManager) return;
+        //DungoenManager->SpawnNewDungeon();
+        //FString SelectedThemeText = DungeonManager->GetSelectedThemeText();
+        //FString SelectedTreasureText = DungeonManager->GetSelectedTreasureText();
+        //GenerateQuestText
+        //you now must dungeontext
+
+        //If no
+        //See you next time
+    }
+
     FText QuestLine = GenerateQuestText
     (
         QuestAdjectivesTable,
@@ -196,20 +226,6 @@ void ADomeara::BuildDialogueLines()
 
     ActiveDialogueLines.Add(QuestLine);
     bHasGivenQuest = true;
-
-    if (!DungeonManager->HasPlayerEnteredPortal() && bHasGivenQuest)
-    {
-        ActiveDialogueLines.Add
-        (
-            FText::Format
-            (
-                FText::FromString("You must first travel through the portal to the {0} to retrieve the {1}."),
-                FText::FromString(SelectedThemeText),
-                FText::FromString(SelectedTreasureText)
-            )
-        ); 
-        return;
-    }
 }
 
 void ADomeara::ShowCurrentDialogueLine()
@@ -273,9 +289,12 @@ FText ADomeara::GenerateFirstMeetingText(const UDataTable* AdjectiveTable, FStri
     GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::FirstMeetingClause, FirstMeetingClause);
 
     FString Template = 
-    TEXT("{FirstMeetingClause}, {PlayerName}.");
+        TEXT("{FirstMeetingClause}, {PlayerName}.");
 
-    return FText::FromString(Template);
+        Template = Template.Replace(TEXT("{FirstMeetingClause}"), *FirstMeetingClause);
+        Template = Template.Replace(TEXT("{PlayerName}"), *PlayerName);
+
+        return FText::FromString(Template);
 
 }
 
@@ -289,9 +308,12 @@ FText ADomeara::GeneratePredecessorWisdomLine(const UDataTable* AdjectiveTable)
     int32 CurrentBankedWisdom = DungeonManager->GetBankedWisdom();
 
     FString Template = 
-    TEXT("Your {PredecessorWord} left you %d Wisdom.");
+        TEXT("Your {PredecessorWord} left you {CurrentBankedWisdom} Wisdom.");
 
-    return FText::FromString(Template);
+        Template = Template.Replace(TEXT("{PredecessorWord}"), *PredecessorWord);
+        Template = Template.Replace(TEXT("{CurrentBankedWisdom}"), *FString::FromInt(CurrentBankedWisdom));
+
+        return FText::FromString(Template);
 }
 
 
@@ -305,7 +327,10 @@ FText ADomeara::GenerateGreetingsText(const UDataTable* AdjectiveTable, FString&
     FString Template =
         TEXT("{GreetingsWord}, {PlayerName}.");
 
-    return FText::FromString(Template);
+        Template = Template.Replace(TEXT("{GreetingsWord}"), *GreetingsWord);
+        Template = Template.Replace(TEXT("{PlayerName}"), *PlayerName);
+
+        return FText::FromString(Template);
 }
 
 FText ADomeara::GenerateQuestText(const UDataTable* AdjectiveTable, FString& PlayerName, FString& SelectedThemeName, FString& SelectedTreasureName)
@@ -323,9 +348,9 @@ FText ADomeara::GenerateQuestText(const UDataTable* AdjectiveTable, FString& Pla
     GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::PossibleWord, PossibleWord);
 
 	FString Template = 
-		TEXT("You {MustWord} {TravelWord} the {ThemeName} of {PlaceAdj} to {CollectWord} {AsManyWord} {ItemAdjA} {TreasureName}s of {ItemAdjB} {PossibleWord}.");
+		TEXT("{MustWord} {TravelWord} the {ThemeName} of {PlaceAdj} to {CollectWord} {AsManyWord} {ItemAdjA} {TreasureName}s of {ItemAdjB} {PossibleWord}.");
 
-		Template = Template.Replace(TEXT("{PlayerName}"), *PlayerName);
+
 		Template = Template.Replace(TEXT("{MustWord}"), *MustWord);
 		Template = Template.Replace(TEXT("{TravelWord}"), *TravelWord);
 		Template = Template.Replace(TEXT("{ThemeName}"), *SelectedThemeName);
@@ -337,5 +362,5 @@ FText ADomeara::GenerateQuestText(const UDataTable* AdjectiveTable, FString& Pla
 		Template = Template.Replace(TEXT("{ItemAdjB}"), *ItemAdjB);
 		Template = Template.Replace(TEXT("{PossibleWord}"), *PossibleWord);
 
-    return FText::FromString(Template);
+        return FText::FromString(Template);
 }

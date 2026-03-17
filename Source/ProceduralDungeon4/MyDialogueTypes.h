@@ -10,9 +10,6 @@ struct FQuestAdjectiveRow : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString ItemAdjective;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString PlaceAdjective;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

@@ -59,7 +59,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Quest Text")
 	UDataTable* QuestAdjectivesTable;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	ADungeonManager* DungeonManager;
 
 	bool GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue);
