@@ -63,10 +63,13 @@ protected:
 	ADungeonManager* DungeonManager;
 
 	bool GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue);
-	FText GenerateGreetingsText(const UDataTable* AdjectiveTable, const FString& PlayerName);
-	FText GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName, FString& SelectedThemeName, FString& SelectedTreasureName);
+	FText GenerateFirstMeetingText(const UDataTable* Table, FString& PlayerName);
+	FText GeneratePredecessorWisdomLine(const UDataTable* Table);
+	FText GenerateGreetingsText(const UDataTable* AdjectiveTable, FString& PlayerName);
+	FText GenerateQuestText(const UDataTable* AdjectiveTable, FString& PlayerName, FString& SelectedThemeName, FString& SelectedTreasureName);
 
 	//Dialogue Bools
+	bool bFirstMeeting = true;
 	bool bHasGivenQuest = false;
 
 	//Animations

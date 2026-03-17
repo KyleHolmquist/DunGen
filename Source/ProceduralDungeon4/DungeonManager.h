@@ -168,14 +168,15 @@ protected:
 
 	// ---- Dungeon Spawning ----
 
-	int AccruedWisdom;
-	int DungeonSize;
-	int BreakableQuantityInLevel;
-	int PropQuantityInLevel;
-	int EnemyQuantityInLevel;
-	int EnemyHealth;
-	int EnemyWisdom;
-	int TotalEmptySpaces;
+	int32 AccruedWisdom;
+	int32 BankedWisdom;
+	int32 DungeonSize;
+	int32 BreakableQuantityInLevel;
+	int32 PropQuantityInLevel;
+	int32 EnemyQuantityInLevel;
+	int32 EnemyHealth;
+	int32 EnemyWisdom;
+	int32 TotalEmptySpaces;
 
 	UPROPERTY(VisibleAnywhere, Category=Dungeon)
 	AFloorGeneratorBase* DungeonModule = nullptr;
@@ -267,6 +268,9 @@ public:
 
 	bool HasPlayerEnteredPortal() const { return bPlayerEnteredPortal; }
 	void SetPlayerEnteredPortal(bool bEntered) { bPlayerEnteredPortal = bEntered; }
+
+	int32 GetBankedWisdom() { return BankedWisdom; }
+	int32 GetAccruedWisdom() { return AccruedWisdom; }
 
 	void SpawnNewDungeon();
 

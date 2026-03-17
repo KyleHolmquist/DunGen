@@ -146,7 +146,7 @@ void ADomeara::BuildDialogueLines()
 {
     ActiveDialogueLines.Empty();
 
-    const FString PlayerName = TEXT("Airsto");
+    FString PlayerName = TEXT("Airsto");
     FString SelectedThemeText = DungeonManager->GetSelectedThemeText();
     FString SelectedTreasureText = DungeonManager->GetSelectedTreasureText();
 
@@ -155,6 +155,47 @@ void ADomeara::BuildDialogueLines()
         UE_LOG(LogTemp, Warning, TEXT("Domeara::BuildDialogueLines - DungeonManager is null."));
         return;
     }
+
+    if (!bFirstMeeting)
+    {
+        FText GreetingsLine = GenerateGreetingsText
+        (
+            QuestAdjectivesTable,
+            PlayerName
+        );
+
+        ActiveDialogueLines.Add(GreetingsLine);
+    }
+
+    if (bFirstMeeting)
+    {
+        FText FirstMeetingLine = GenerateFirstMeetingText
+        (
+            QuestAdjectivesTable,
+            PlayerName
+        );
+
+        FText PredecessorWisdomLine = GeneratePredecessorWisdomLine
+        (
+            QuestAdjectivesTable
+        );
+
+        ActiveDialogueLines.Add(FirstMeetingLine);
+        ActiveDialogueLines.Add(PredecessorWisdomLine);
+
+        bFirstMeeting = false;
+    }
+
+    FText QuestLine = GenerateQuestText
+    (
+        QuestAdjectivesTable,
+        PlayerName,
+        SelectedThemeText,
+        SelectedTreasureText
+    );
+
+    ActiveDialogueLines.Add(QuestLine);
+    bHasGivenQuest = true;
 
     if (!DungeonManager->HasPlayerEnteredPortal() && bHasGivenQuest)
     {
@@ -169,24 +210,6 @@ void ADomeara::BuildDialogueLines()
         ); 
         return;
     }
-
-    FText GreetingsLine = GenerateGreetingsText
-    (
-        QuestAdjectivesTable,
-        PlayerName
-    );
-
-    FText QuestLine = GenerateQuestText
-    (
-        QuestAdjectivesTable,
-        PlayerName,
-        SelectedThemeText,
-        SelectedTreasureText
-    );
-
-    ActiveDialogueLines.Add(GreetingsLine);
-    ActiveDialogueLines.Add(QuestLine);
-    bHasGivenQuest = true;
 }
 
 void ADomeara::ShowCurrentDialogueLine()
@@ -242,7 +265,37 @@ bool ADomeara::GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAd
 	return true;
 }
 
-FText ADomeara::GenerateGreetingsText(const UDataTable* AdjectiveTable, const FString& PlayerName)
+FText ADomeara::GenerateFirstMeetingText(const UDataTable* AdjectiveTable, FString& PlayerName)
+{
+    FString FirstMeetingClause;
+
+    //Pull from FirstMeeting Row
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::FirstMeetingClause, FirstMeetingClause);
+
+    FString Template = 
+    TEXT("{FirstMeetingClause}, {PlayerName}.");
+
+    return FText::FromString(Template);
+
+}
+
+FText ADomeara::GeneratePredecessorWisdomLine(const UDataTable* AdjectiveTable)
+{
+    FString PredecessorWord;
+
+    //Pull from Predecessor Row
+    GetRandomAdjectiveValue(AdjectiveTable, &FQuestAdjectiveRow::PredecessorWord, PredecessorWord);
+
+    int32 CurrentBankedWisdom = DungeonManager->GetBankedWisdom();
+
+    FString Template = 
+    TEXT("Your {PredecessorWord} left you %d Wisdom.");
+
+    return FText::FromString(Template);
+}
+
+
+FText ADomeara::GenerateGreetingsText(const UDataTable* AdjectiveTable, FString& PlayerName)
 {
     FString GreetingsWord;
 
@@ -252,10 +305,10 @@ FText ADomeara::GenerateGreetingsText(const UDataTable* AdjectiveTable, const FS
     FString Template =
         TEXT("{GreetingsWord}, {PlayerName}.");
 
-        return FText::FromString(Template);
+    return FText::FromString(Template);
 }
 
-FText ADomeara::GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName, FString& SelectedThemeName, FString& SelectedTreasureName)
+FText ADomeara::GenerateQuestText(const UDataTable* AdjectiveTable, FString& PlayerName, FString& SelectedThemeName, FString& SelectedTreasureName)
 {
 	FString MustWord, TravelWord, PlaceAdj, CollectWord, AsManyWord, ItemAdjA, ItemAdjB, PossibleWord;
 
@@ -284,5 +337,5 @@ FText ADomeara::GenerateQuestText(const UDataTable* AdjectiveTable, const FStrin
 		Template = Template.Replace(TEXT("{ItemAdjB}"), *ItemAdjB);
 		Template = Template.Replace(TEXT("{PossibleWord}"), *PossibleWord);
 
-		return FText::FromString(Template);
+    return FText::FromString(Template);
 }

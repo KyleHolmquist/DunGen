@@ -38,4 +38,10 @@ struct FQuestAdjectiveRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString PossibleWord;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString FirstMeetingClause;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString PredecessorWord;
 };
