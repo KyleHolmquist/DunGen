@@ -119,3 +119,47 @@ void AFloorGeneratorBase::BuildCeiling()
 {
 	//Base version does nothing. Derived classes override.
 }
+
+void AFloorGeneratorBase::DestroyGeneratedActors()
+{
+	for (AWallTile* WallTile : GeneratedWallActors)
+	{
+		if (IsValid(WallTile))
+		{
+			WallTile->Destroy();
+		}
+	}
+
+	GeneratedWallActors.Empty();
+
+	for (AFloorTile* FloorTile : GeneratedFloorActors)
+	{
+		if (IsValid(FloorTile))
+		{
+			FloorTile->Destroy();
+		}
+	}
+
+	GeneratedFloorActors.Empty();
+
+	for (AFloorTile* CeilingActor : GeneratedCeilingActors)
+	{
+		if (IsValid(CeilingActor))
+		{
+			CeilingActor->Destroy();
+		}
+	}
+
+	GeneratedCeilingActors.Empty();
+
+	for (AActor* GeneratedActor : GeneratedActors)
+	{
+		if (IsValid(GeneratedActor))
+		{
+			GeneratedActor->Destroy();
+		}
+	}
+
+	GeneratedActors.Empty();
+
+}

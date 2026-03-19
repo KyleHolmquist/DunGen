@@ -88,6 +88,9 @@ public:
 	FVector GetPortalForwardVector() const;
 	FVector GetExitDirection() const;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Portal)
+	bool bIsHomePortal = false;
+
 	
 
 };

@@ -141,7 +141,16 @@ protected:
     TArray<FVector> GeneratedEmptyLocations;
 
     UPROPERTY(VisibleAnywhere)
+    TArray<AActor*> GeneratedActors;
+
+    UPROPERTY(VisibleAnywhere)
     TArray<AWallTile*> GeneratedWallActors;
+
+    UPROPERTY(VisibleAnywhere)
+    TArray<AFloorTile*> GeneratedFloorActors;
+
+    UPROPERTY(VisibleAnywhere)
+    TArray<AFloorTile*> GeneratedCeilingActors;
 
     UPROPERTY(VisibleAnywhere)
     TArray<AWallTile*> GeneratedDoorActors;
@@ -149,4 +158,6 @@ protected:
 public:
     FORCEINLINE const TArray<FVector>& GetGeneratedEmptyLocations() const { return GeneratedEmptyLocations; }
     FORCEINLINE const TArray<AWallTile*>& GetGeneratedWallActors() const { return GeneratedWallActors; }
+
+    void DestroyGeneratedActors();
 };

@@ -115,6 +115,15 @@ void APortal::TeleportPlayer(AAirsto* Airsto)
 		const FVector ExitDirection = ConnectedPortal->GetExitDirection();
 		Airsto->SetActorLocation(MoveUp);
 		Airsto->SetActorRotation(ExitDirection.Rotation());
+		FVector TargetScale = bIsHomePortal ? FVector(0.35f) : FVector(1.0f);
+		float TargetArmLength = bIsHomePortal ? 150.f : 450.f;
+		float TargetWalkSpeed = bIsHomePortal ? (Airsto->GetBaseWalkSpeed() / 3) : Airsto->GetBaseWalkSpeed();
+		float TargetDodgeSpeed = bIsHomePortal ? (Airsto->GetBaseDodgeSpeed() / 3) : Airsto->GetBaseDodgeSpeed(); 
+		Airsto->SetActorScale3D(TargetScale);
+		Airsto->SetSpringArmLength(TargetArmLength);
+		Airsto->SetCurrentWalkSpeed(TargetWalkSpeed);
+		Airsto->SetCurrentDodgeSpeed(TargetDodgeSpeed);
+
 	}
 	
 }

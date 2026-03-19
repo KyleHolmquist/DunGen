@@ -6,6 +6,12 @@
 #include "Blueprint/UserWidget.h"
 #include "DunGenDialogueOverlay.generated.h"
 
+struct FDialogueOption;
+class UTextBlock;
+class UVerticalBox;
+class UUserWidget;
+class UDialogueOptionEntry;
+
 /**
  * 
  */
@@ -17,14 +23,28 @@ class PROCEDURALDUNGEON4_API UDunGenDialogueOverlay : public UUserWidget
 public:
 
 	void SetName(FString DialogueName);
-	void SetDialogueText(FString Dialogue);
+	void SetDialogueText(const FText& InText);
+	void ShowDialogueOptions(const TArray<FDialogueOption>& Options);
+	void SelectDialogueOption(int32 OptionIndex);
+	void HideDialogueOptions();
 
-private:
+protected:
+
+    UFUNCTION()
+    void HandleDialogueOptionClicked(int32 OptionIndex);
 
 	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* NameText;
+	UTextBlock* NameText;
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* DialogueText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UVerticalBox> DialogueOptionsBox;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Dialogue)
+	TSubclassOf<UDialogueOptionEntry> DialogueOptionButtonClass;
+
+private:
 	
 };

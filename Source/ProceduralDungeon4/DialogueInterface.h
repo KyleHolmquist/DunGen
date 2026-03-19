@@ -6,6 +6,8 @@
 #include "UObject/Interface.h"
 #include "DialogueInterface.generated.h"
 
+struct FDialogueOptions;
+
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
 class UDialogueInterface : public UInterface
@@ -21,4 +23,6 @@ class PROCEDURALDUNGEON4_API IDialogueInterface
 public:
 
 	virtual void Speak();
+
+	virtual void SelectDialogueOption(int32 OptionIndex);
 };

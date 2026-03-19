@@ -20,6 +20,10 @@
 #include "Treasure.h"
 #include "DialogueInterface.h"
 #include "DunGenDialogueOverlay.h"
+#include "MyDialogueTypes.h"
+#include "GameFramework/PlayerController.h"
+#include "Blueprint/UserWidget.h"
+#include "ProceduralDungeonGameMode.h"
 
 AAirsto::AAirsto()
 {
@@ -31,6 +35,10 @@ AAirsto::AAirsto()
 
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 400.f, 0.f);
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
+	}
 
 	GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 	GetMesh()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
@@ -47,6 +55,26 @@ AAirsto::AAirsto()
 
 }
 
+void AAirsto::BeginPlay()
+{
+	Super::BeginPlay();
+
+	CurrentDodgeSpeed = BaseDodgeSpeed;
+
+    //InitializeEnhancedInput();
+    Tags.Add(FName("EngageableTarget"));
+    InitializeDunGenOverlay();
+	
+}
+
+void AAirsto::PawnClientRestart()
+{
+    Super::PawnClientRestart();
+
+    InitializeEnhancedInput();
+    InitializeDunGenOverlay();
+}
+
 void AAirsto::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -60,10 +88,10 @@ void AAirsto::Tick(float DeltaTime)
 	if (ActionState == EActionState::EAS_Dodging)
     {
         //Move the player for the dodge
-        FVector V = GetCharacterMovement()->Velocity;
-        V.X = DodgeDirection.X * DodgeSpeed;
-        V.Y = DodgeDirection.Y * DodgeSpeed;
-        GetCharacterMovement()->Velocity = V;
+        FVector Vel = GetCharacterMovement()->Velocity;
+        Vel.X = DodgeDirection.X * CurrentDodgeSpeed;
+        Vel.Y = DodgeDirection.Y * CurrentDodgeSpeed;
+        GetCharacterMovement()->Velocity = Vel;
 
         //Rotate toward dodge direction
         const FRotator TargetRot(0.f, DodgeDirection.Rotation().Yaw, 0.f);
@@ -94,18 +122,26 @@ void AAirsto::AddGold(ATreasure* Treasure)
 	if (Attributes && DunGenOverlay)
 	{
 		Attributes->AddGold(Treasure->GetGold());
-		DunGenOverlay->SetGold(Attributes->GetGold());
+		DunGenOverlay->SetGold(Attributes->GetTreasure());
 	}
 }
 
-void AAirsto::BeginPlay()
+void AAirsto::AddToGoldAmount(int Amount)
 {
-	Super::BeginPlay();
+	if (Attributes && DunGenOverlay)
+	{
+		Attributes->AddGold(Amount);
+		DunGenOverlay->SetGold(Attributes->GetTreasure());
+	}
+}
 
-    InitializeEnhancedInput();
-    Tags.Add(FName("EngageableTarget"));
-    InitializeDunGenOverlay();
-	
+void AAirsto::AddToWisdomAmount(int Amount)
+{
+	if (Attributes && DunGenOverlay)
+	{
+		Attributes->AddWisdom(Amount);
+		DunGenOverlay->SetWisdom(Attributes->GetWisdom());
+	}
 }
 
 void AAirsto::InitializeEnhancedInput()
@@ -114,10 +150,24 @@ void AAirsto::InitializeEnhancedInput()
     {
         if (UEnhancedInputLocalPlayerSubsystem *Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
         {
+			Subsystem->ClearAllMappings();
             Subsystem->AddMappingContext(AirstoMappingContext, 0);
+
+			UE_LOG(LogTemp, Warning, TEXT("AAirsto::InitializeEnhancedInput - Mapping context added."));
+
         }
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("AAirsto::InitializeEnhancedInput - Input subsystem is null."));
+		}
+
         Tags.Add(FName("Player"));
     }
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AAirsto::InitializeEnhancedInput - Controller is null."));
+
+	}
 }
 void AAirsto::InitializeDunGenOverlay()
 {
@@ -127,7 +177,6 @@ void AAirsto::InitializeDunGenOverlay()
         ADunGenHUD *DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
         if (DunGenHUD)
         {
-			UE_LOG(LogTemp, Warning, TEXT("GotDunGenHUD"));
 
             DunGenOverlay = DunGenHUD->GetDunGenOverlay();
             if (DunGenOverlay && Attributes)
@@ -421,6 +470,15 @@ void AAirsto::Die_Implementation()
 
 	ActionState = EActionState::EAS_Dead;
 	DisableMeshCollision();
+
+	AProceduralDungeonGameMode* GameMode = 
+		Cast<AProceduralDungeonGameMode>(GetWorld()->GetAuthGameMode());
+
+	if (GameMode)
+	{
+		GameMode->SpawnPlayerAtTransform(GetActorTransform());
+	}
+	
 }
 
 void AAirsto::AttackEnd()
@@ -528,6 +586,101 @@ void AAirsto::InitializeDunGenDialogueOverlay()
     }
 }
 
+void AAirsto::SetSpringArmLength(float Length)
+{
+	if (SpringArm)
+	{
+		SpringArm->TargetArmLength = Length;
+	}
+}
+
+void AAirsto::SetBaseWalkSpeed(float Speed)
+{
+	BaseWalkSpeed = Speed;
+}
+
+void AAirsto::SetCurrentWalkSpeed(float NewSpeed)
+{
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->MaxWalkSpeed = NewSpeed;
+	}
+}
+
+void AAirsto::SetBaseDodgeSpeed(float Speed)
+{
+	BaseDodgeSpeed = Speed;
+}
+
+void AAirsto::SetCurrentDodgeSpeed(float Speed)
+{
+	CurrentDodgeSpeed = Speed;
+}
+
+int32 AAirsto::GetTreasureAmount()
+{
+	if (Attributes)
+	{
+		return Attributes->GetTreasure();
+	}
+
+	return 0;
+}
+
+void AAirsto::SetWisdomMultiplier(float Multiplier)
+{
+	WisdomMultiplier = Multiplier;
+}
+
+void AAirsto::SelectDialogueOption(int32 OptionIndex)
+{
+	UE_LOG(LogTemp, Warning, TEXT("AAirsto::SelectDialogueOption called with index: %d"), OptionIndex);
+
+	if (!DialogueTarget)
+	{
+        UE_LOG(LogTemp, Warning, TEXT("Airsto::SelectDialogueOption - DialogueTarget is null."));
+        return;
+	}
+
+	IDialogueInterface* DialogueInterface = Cast<IDialogueInterface>(DialogueTarget);
+	if (!DialogueInterface)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Airsto::SelectDialogueOption - DialogueTarget does not implement DialogueInterface."));
+		return;
+	}
+
+	DialogueInterface->SelectDialogueOption(OptionIndex);
+
+}
+
+void AAirsto::ShowDialogueOptions(const TArray<FDialogueOption>& Options)
+{
+    APlayerController* PlayerController = Cast<APlayerController>(GetController());
+    if (!PlayerController) return;
+
+    ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
+    if (!DunGenHUD) return;
+
+    UDunGenDialogueOverlay* DialogueOverlay = DunGenHUD->GetDunGenDialogueOverlay();
+    if (!DialogueOverlay) return;
+
+    DialogueOverlay->ShowDialogueOptions(Options);
+}
+
+void AAirsto::HideDialogueOptions()
+{
+    APlayerController* PlayerController = Cast<APlayerController>(GetController());
+    if (!PlayerController) return;
+
+    ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
+    if (!DunGenHUD) return;
+
+    UDunGenDialogueOverlay* DialogueOverlay = DunGenHUD->GetDunGenDialogueOverlay();
+    if (!DialogueOverlay) return;
+
+    DialogueOverlay->HideDialogueOptions();
+}
+
 void AAirsto::ShowDialogue(const FText& SpeakerName, const FText& Text)
 {
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
@@ -554,5 +707,66 @@ void AAirsto::ShowDialogue(const FText& SpeakerName, const FText& Text)
 	}
 
 	DialogueOverlay->SetName(SpeakerName.ToString());
-	DialogueOverlay->SetDialogueText(Text.ToString());
+	DialogueOverlay->SetDialogueText(Text);
+
+	//EnterDialogueInputMode();
+}
+
+void AAirsto::EnterDialogueInputMode()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AAirsto::EnterDialogueInputMode - PlayerController is null."));
+		return;
+	}
+
+	ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
+	if (!DunGenHUD)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AAirsto::EnterDialogueInputMode - DunGenHUD is null."));
+		return;
+	}
+
+	UDunGenDialogueOverlay* DialogueOverlay = DunGenHUD->GetDunGenDialogueOverlay();
+	if (!DialogueOverlay)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AAirsto::EnterDialogueInputMode - DialogueOverlay is null."));
+		return;
+	}
+
+	//Unlock and Unhide the Mouse
+	FInputModeGameAndUI InputMode;
+	InputMode.SetWidgetToFocus(DialogueOverlay->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputMode.SetHideCursorDuringCapture(false);
+
+	//Enter input mode
+	PlayerController->SetInputMode(InputMode);
+	//Show the mouse cursor
+	PlayerController->bShowMouseCursor = true;
+	//Stop moving the camera with the mouse
+	PlayerController->SetIgnoreLookInput(true);
+
+	UE_LOG(LogTemp, Warning, TEXT("AAirsto::EnterDialogueInputMode - Dialogue input mode enabled."));
+}
+
+void AAirsto::ExitDialogueInputMode()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AAirsto::ExitDialogueInputMode - PlayerController is null."));
+		return;
+	}
+
+	//Restore the input mode
+	FInputModeGameOnly InputMode;
+	PlayerController->SetInputMode(InputMode);
+	//Hide the mouse cursor
+	PlayerController->bShowMouseCursor = false;
+	//Allow mouse to control camera
+	PlayerController->SetIgnoreLookInput(false);
+
+	UE_LOG(LogTemp, Warning, TEXT("AAirsto::ExitDialogueInputMode - Returned to game input mode."));
 }

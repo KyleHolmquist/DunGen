@@ -168,6 +168,8 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 
 				if (!FloorActor) continue;
 
+				GeneratedFloorActors.Add(FloorActor);
+
 				FloorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
@@ -267,10 +269,9 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 
 						if (WallActor)
 						{
+							GeneratedWallActors.Add(WallActor);
 
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
-							GeneratedWallActors.Add(WallActor);
 							UStaticMeshComponent* WComp = WallActor->GetItemMesh();
 							if (!WComp)
 							{
@@ -315,9 +316,10 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 
 						if (WallActor)
 						{
+							GeneratedWallActors.Add(WallActor);
+
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
-							GeneratedWallActors.Add(WallActor);
 							UStaticMeshComponent* WComp = WallActor->GetItemMesh();
 							if (!WComp)
 							{
@@ -362,9 +364,10 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 						
 						if (WallActor)
 						{
+							GeneratedWallActors.Add(WallActor);
+
 							WallActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 							
-							GeneratedWallActors.Add(WallActor);
 							UStaticMeshComponent* WComp = WallActor->GetItemMesh();
 							if (!WComp)
 							{
@@ -463,6 +466,8 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 
 			if (DoorActor)
 			{
+				GeneratedDoorActors.Add(DoorActor);
+
 				DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 				if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
@@ -490,8 +495,6 @@ void AHolmquist_FloorGenerator::CreateDoors(int32 DoorCount)
 					Door.Location = DoorActor->GetActorLocation();
 					Door.Rotation = DoorActor->GetActorRotation();
 					ExteriorDoors.Add(Door);
-
-					GeneratedDoorActors.Add(DoorActor);
 				}
 				else
 				{
@@ -569,6 +572,8 @@ void AHolmquist_FloorGenerator::BuildCeiling()
 
 			AFloorTile* CeilingActor = World->SpawnActor<AFloorTile>(FloorTileClass, Pos, FRotator(180.f, 0.f, 0.f), Params);
 			if (!CeilingActor) continue;
+
+			GeneratedCeilingActors.Add(CeilingActor);
 
 			if (UStaticMeshComponent* MeshComp = CeilingActor->GetItemMesh())
 			{

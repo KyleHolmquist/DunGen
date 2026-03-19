@@ -19,6 +19,7 @@ class ATreasure;
 class UDunGenOverlay;
 class UDunGenDialogueOverlay;
 class UAttributeComponent;
+struct FDialogueOption;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API AAirsto : public ABaseCharacter, public IPickupInterface
@@ -35,11 +36,16 @@ public:
 	virtual void AddWisdom(AWisdom* Wisdom) override;
 	virtual void AddGold(ATreasure* Treasure) override;
 
+	void AddToGoldAmount(int Amount);
+	void AddToWisdomAmount(int Amount);
+
 	void ShowInteractButton();
 	void HideInteractButton();
 
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void PawnClientRestart() override;
 
     UPROPERTY(EditAnywhere, Category = Input)
     UInputMappingContext* AirstoMappingContext;
@@ -117,8 +123,11 @@ protected:
 	bool IsUnoccupied();
 
 	//Dodge Movement
-	UPROPERTY(EditAnywhere, Category="Combat")
-	float DodgeSpeed = 900.f;
+	UPROPERTY(EditAnywhere, Category="Stats")
+	float BaseDodgeSpeed = 900.f;
+
+	UPROPERTY(EditAnywhere, Category="Stats")
+	float CurrentDodgeSpeed;
 
 	FVector DodgeDirection = FVector::ZeroVector;
 
@@ -132,6 +141,15 @@ protected:
 
 	UFUNCTION(BlueprintCallable)
 	void InitializeDunGenDialogueOverlay();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Stats);
+	float BaseWalkSpeed = 500.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Stats);
+	float CurrentWalkSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Stats);
+	float WisdomMultiplier = 10.f;
 
 private:
 
@@ -171,9 +189,55 @@ public:
 	FORCEINLINE UDunGenOverlay* GetDunGenOverlay() { return DunGenOverlay; }
 	FORCEINLINE UDunGenDialogueOverlay* GetDunGenDialogueOverlay() { return DunGenDialogueOverlay; }
 
+	UFUNCTION(BlueprintCallable)
 	void SetDialogueTarget(AActor* Target) { DialogueTarget = Target; }
 
 	UFUNCTION(BlueprintCallable)
+	void ShowDialogueOptions(const TArray<FDialogueOption>& Options);
+
+	UFUNCTION(BlueprintCallable)
+	void SelectDialogueOption(int32 OptionIndex);
+
+	UFUNCTION(BlueprintCallable)
+	void HideDialogueOptions();
+
+	UFUNCTION(BlueprintCallable)
+	void SetSpringArmLength(float Length);
+
+	UFUNCTION(BlueprintCallable)
+	float GetBaseWalkSpeed() { return BaseWalkSpeed; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetBaseWalkSpeed(float Speed);
+
+	UFUNCTION(BlueprintCallable)
+	void SetCurrentWalkSpeed(float Speed);
+
+	UFUNCTION(BlueprintCallable)
+	float GetBaseDodgeSpeed() { return BaseDodgeSpeed; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetBaseDodgeSpeed(float Speed);
+
+	UFUNCTION(BlueprintCallable)
+	void SetCurrentDodgeSpeed(float Speed);
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetTreasureAmount();
+
+	UFUNCTION(BlueprintCallable)
+	float GetWisdomMultiplier() { return WisdomMultiplier; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetWisdomMultiplier(float Multiplier);
+
+	UFUNCTION(BlueprintCallable)
 	void ShowDialogue(const FText& SpeakerName, const FText& Text);
+
+	UFUNCTION(BlueprintCallable)
+	void EnterDialogueInputMode();
+
+	UFUNCTION(BlueprintCallable)
+	void ExitDialogueInputMode();
 
 };

@@ -9,3 +9,8 @@ void IDialogueInterface::Speak()
 {
 
 }
+
+void IDialogueInterface::SelectDialogueOption(int32 OptionIndex)
+{
+
+}

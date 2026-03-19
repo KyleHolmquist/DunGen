@@ -186,6 +186,8 @@ void ACA_FloorGenerator::SpawnGeometry()
 				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 				AFloorTile* FloorActor = World->SpawnActor<AFloorTile>(FloorTileClass, WorldPos, FRotator::ZeroRotator, Params);
 				if (!FloorActor) continue;
+
+				GeneratedFloorActors.Add(FloorActor);
 				
 				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
 				if (!MeshComp)
@@ -233,6 +235,8 @@ void ACA_FloorGenerator::SpawnGeometry()
 				const float ZScale = WallHeight / BasePlaneSize;
 
 				WallActor->SetActorScale3D(FVector(XYScale, XYScale, ZScale));
+
+				GeneratedActors.Add(WallActor);
 
 				//Remember this wall actor at (x, y)
 				WallActorMap[Index(x, y)] = WallActor;
@@ -560,7 +564,7 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 
 					if (FloorActor)
 					{
-
+						GeneratedFloorActors.Add(FloorActor);
 						if (UStaticMeshComponent* FloorComp = FloorActor->GetItemMesh())
 						{
 							//FloorComp->SetStaticMesh(FloorTile);
@@ -611,14 +615,14 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 			if (DoorActor)
 			{
 
+				GeneratedDoorActors.Add(DoorActor);
+
 				if (UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh())
 				{
 					DoorActor->SetActorScale3D(WallTransform.GetScale3D());
 					
 					DoorComp->SetMobility(EComponentMobility::Movable);
 					DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
-
-					GeneratedDoorActors.Add(DoorActor);
 				}
 				else
 				{
@@ -782,6 +786,8 @@ void ACA_FloorGenerator::BuildCeiling()
 
 			AFloorTile* CeilingActor = World->SpawnActor<AFloorTile>(FloorTileClass, Pos, FRotator(180.f, 0.f, 0.f), Params);
 			if (!CeilingActor) continue;
+
+			GeneratedCeilingActors.Add(CeilingActor);
 
 			if (UStaticMeshComponent* MeshComp = CeilingActor->GetItemMesh())
 			{

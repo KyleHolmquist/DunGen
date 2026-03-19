@@ -202,6 +202,7 @@ protected:
 	void SetDungeonSize(int WisdomAmount);
 	AFloorGeneratorBase* SpawnDungeonModule();
 	void PopulateDungeon();
+	void DestroyCurrentDungeon();
 	bool TryPopRandomEmptyLocation(FVector& OutLocation);
 	void RefreshEmptySpaceData();
 	bool TryPopRandomEmptySpaceWorld(FVector& OutLocation);

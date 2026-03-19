@@ -13,6 +13,8 @@ class UDataTable;
 class ADungeonManager;
 struct FQuestAdjectiveRow;
 class UAnimationAsset;
+struct FDialogueNode;
+struct FDialogueOption;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API ADomeara : public ABaseCharacter, public IDialogueInterface
@@ -24,6 +26,10 @@ public:
 	ADomeara();
 
 	virtual void Speak();
+
+	virtual void SelectDialogueOption(int32 OptionIndex) override;
+	void HandleDialogueOption(const FDialogueOption& SelectedOption);
+	bool CurrentNodeHasOptions() const;
 
 protected:
 
@@ -39,10 +45,10 @@ protected:
 	bool bInDialogue = false;
 
 	UPROPERTY(VisibleAnywhere, Category=Dialogue)
-	int32 CurrentDialogueIndex = INDEX_NONE;
+	TArray<FDialogueNode> ActiveDialogueNodes;
 
 	UPROPERTY(VisibleAnywhere, Category=Dialogue)
-	TArray<FText> ActiveDialogueLines;
+	int32 CurrentDialogueNodeIndex = INDEX_NONE;
 
 	UFUNCTION()
 	virtual void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -53,7 +59,10 @@ protected:
 	void AdvanceDialogue();
 	void EndDialogue();
 	void BuildDialogueLines();
-	void ShowCurrentDialogueLine();
+
+	void ShowCurrentDialogueNode();
+
+	void NewDungeonQuestInit();
 
 	// ---- Quest Text ----
 	UPROPERTY(EditDefaultsOnly, Category="Quest Text")
@@ -63,14 +72,16 @@ protected:
 	ADungeonManager* DungeonManager;
 
 	bool GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue);
-	FText GenerateFirstMeetingText(const UDataTable* Table, FString& PlayerName);
+	FString GetCurrentPlayerName() const;
+	FText GenerateFirstMeetingText(const UDataTable* Table, const FString& PlayerName);
 	FText GeneratePredecessorWisdomLine(const UDataTable* Table);
-	FText GenerateGreetingsText(const UDataTable* AdjectiveTable, FString& PlayerName);
-	FText GenerateQuestText(const UDataTable* AdjectiveTable, FString& PlayerName, FString& SelectedThemeName, FString& SelectedTreasureName);
+	FText GenerateGreetingsText(const UDataTable* AdjectiveTable, const FString& PlayerName);
+	FText GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName, const FString& SelectedThemeName, const FString& SelectedTreasureName);
 
 	//Dialogue Bools
 	bool bFirstMeeting = true;
 	bool bHasGivenQuest = false;
+	bool bHasTradedTreasureForWisdom = false;
 
 	//Animations
 	UPROPERTY(EditAnywhere, Category=Animation)

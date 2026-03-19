@@ -229,6 +229,8 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
         if (!FloorActor) continue;
 
+		GeneratedFloorActors.Add(FloorActor);
+
         if (UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh())
         {
             //MeshComp->SetStaticMesh(FloorMesh);
@@ -265,6 +267,8 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 			if (!WallTileClass) return nullptr;
 
 			AWallTile* Segment = World->SpawnActor<AWallTile>(WallTileClass, SpawnTransform, Params);
+
+			GeneratedWallActors.Add(Segment);
 
             if (!Segment) return nullptr;
 
@@ -1137,6 +1141,8 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 			return;
 		}
 
+		GeneratedDoorActors.Add(DoorActor);
+
 		DoorActor->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
 
 		UStaticMeshComponent* DoorComp = DoorActor->GetItemMesh();
@@ -1151,8 +1157,6 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 		FVector DoorScale = T.GetScale3D();
 		DoorScale.X *= DoorSegments;
 		DoorActor->SetActorScale3D(DoorScale);
-
-		GeneratedDoorActors.Add(DoorActor);
 	};
 
 	auto ConfigurePortalForWall = [&](AWallTile* WallActor, const FDungeonWallSegment& Seg) -> bool
@@ -1376,6 +1380,8 @@ void ABSP_FloorGenerator::BuildCeiling()
 
 		AFloorTile* CeilingActor = World->SpawnActor<AFloorTile>(FloorTileClass, CeilingLocation, FRotator(180.f, 0.f, 0.f), Params);
 		if (!CeilingActor) continue;
+
+		GeneratedCeilingActors.Add(CeilingActor);
 
 		if (UStaticMeshComponent* MeshComp = CeilingActor->GetItemMesh())
 		{

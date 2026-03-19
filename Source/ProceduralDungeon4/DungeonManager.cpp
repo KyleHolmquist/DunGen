@@ -780,6 +780,62 @@ void ADungeonManager::PopulateDungeon()
 	);
 }
 
+void ADungeonManager::DestroyCurrentDungeon()
+{
+	UE_LOG(LogTemp, Warning, TEXT("DungeonManager::DestroyCurrentDungeon - Starting cleanup."));
+
+	//Stop delayed systems from touching actors that are about to be destroyed
+	GetWorldTimerManager().ClearTimer(PatrolDelayHandle);
+
+	//Destroy props, breakables, and  other generic spawned actors
+	for (AActor* SpawnedActor : SpawnedActors)
+	{
+		if (IsValid(SpawnedActor))
+		{
+			SpawnedActor->Destroy();
+		}
+	}
+	SpawnedActors.Empty();
+
+	// Destroy enemies
+	for (AEnemy* Enemy : SpawnedEnemies)
+	{
+		if (IsValid(Enemy))
+		{
+			Enemy->Destroy();
+		}
+	}
+	SpawnedEnemies.Empty();
+
+	// estroy corridor tiles and any other actors attached directly to the manager
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+
+	for (AActor* AttachedActor : AttachedActors)
+	{
+		if (IsValid(AttachedActor) && AttachedActor != DungeonModule)
+		{
+			AttachedActor->Destroy();
+		}
+	}
+
+	//Destroy the dungeon module
+	if (IsValid(DungeonModule))
+	{
+		DungeonModule->DestroyGeneratedActors();
+		DungeonModule->Destroy();
+		DungeonModule = nullptr;
+	}
+
+	//Clear cached dungeon data
+	PortalWallCandidates.Empty();
+	EmptySpaces.Empty();
+	EmptyLocations.Empty();
+	TotalEmptySpaces = 0;
+
+	UE_LOG(LogTemp, Warning, TEXT("DungeonManager::DestroyCurrentDungeon - Cleanup complete."));
+}
+
 bool ADungeonManager::TryPopRandomEmptyLocation(FVector& OutLocation)
 {
 	if (EmptyLocations.Num() == 0) return false;
@@ -1087,6 +1143,8 @@ void ADungeonManager::StartPatrollingDelayed()
 {
 	for (AEnemy* Enemy : SpawnedEnemies)
 	{
+		if (!IsValid(Enemy)) continue;
+
 		SetEnemyPatrolPoints(Enemy);
 		Enemy->StartPatrolling();
 	}
@@ -1367,11 +1425,7 @@ void ADungeonManager::SpawnNewDungeon()
 	UWorld* World = GetWorld();
 	if (!World) return;
 
-	if (IsValid(DungeonModule))
-	{
-		DungeonModule->Destroy();
-		DungeonModule = nullptr;
-	}
+	DestroyCurrentDungeon();
 
 	InitializeDungeonLevelParams();
 

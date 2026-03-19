@@ -66,7 +66,7 @@ public:
 	void AddWisdom(int32 WisdomAmount);
 	void AddGold(int32 NumGold);
 
-	FORCEINLINE int32 GetGold() const { return Gold; }
+	FORCEINLINE int32 GetTreasure() const { return Gold; }
 	FORCEINLINE int32 GetWisdom() const { return Wisdom; }
 	FORCEINLINE int32 GetDodgeCost() const { return DodgeCost; }
 	FORCEINLINE int32 GetAttackCost() const { return AttackCost; }

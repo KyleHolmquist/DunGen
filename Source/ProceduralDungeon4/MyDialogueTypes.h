@@ -4,6 +4,44 @@
 #include "Engine/DataTable.h"
 #include "MYDialogueTypes.generated.h"
 
+UENUM(BlueprintType)
+enum class EDialogueOptionAction : uint8
+{
+	None,
+	GoToNextNode,
+	EndDialogue,
+	SpawnNewDungeon,
+	GiveQuest,
+	TurnInQuest
+};
+
+USTRUCT(BlueprintType)
+struct FDialogueOption
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FText OptionText;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	EDialogueOptionAction Action = EDialogueOptionAction::None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 NextNodeIndex = INDEX_NONE;
+};
+
+USTRUCT(BlueprintType)
+struct FDialogueNode
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FText Line;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FDialogueOption> Options;
+};
+
 USTRUCT(BlueprintType)
 struct FQuestAdjectiveRow : public FTableRowBase
 {

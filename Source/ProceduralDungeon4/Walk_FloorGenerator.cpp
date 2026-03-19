@@ -169,6 +169,8 @@ void AWalk_FloorGenerator::SpawnGeometry()
 
 				if (!FloorActor) continue;
 
+				GeneratedFloorActors.Add(FloorActor);
+
 				UStaticMeshComponent* MeshComp = FloorActor->GetItemMesh();
 				if(!MeshComp)
 				{
@@ -202,6 +204,8 @@ void AWalk_FloorGenerator::SpawnGeometry()
 				AWallTile* WallActor = World->SpawnActor<AWallTile>(WallTileClass, SpawnTransform, Params);
 
 				if (!WallActor) continue;
+
+				GeneratedActors.Add(WallActor);
 
 				UStaticMeshComponent* MeshComp = WallActor->GetItemMesh();
 				if (!MeshComp)
@@ -506,6 +510,8 @@ void AWalk_FloorGenerator::BuildCeiling()
 
 			AFloorTile* CeilingActor = World->SpawnActor<AFloorTile>(FloorTileClass, Pos, FRotator(180.f, 0.f, 0.f), Params);
 			if (!CeilingActor) continue;
+
+			GeneratedCeilingActors.Add(CeilingActor);
 
 			if (UStaticMeshComponent* MeshComp = CeilingActor->GetItemMesh())
 			{
