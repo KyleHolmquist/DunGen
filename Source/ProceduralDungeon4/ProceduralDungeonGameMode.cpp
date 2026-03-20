@@ -34,3 +34,50 @@ void AProceduralDungeonGameMode::SpawnPlayerAtTransform(const FTransform& SpawnT
 
     UE_LOG(LogTemp, Warning, TEXT("SpawnPlayerAtTransform - Restarted player at transform."));
 }
+
+void AProceduralDungeonGameMode::SpawnPlayerAtMainSpawn()
+{
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    APlayerController* PC = World->GetFirstPlayerController();
+    if (!PC)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SpawnPlayerAtMainSpawn - No PlayerController found."));
+        return;
+    }
+
+    AActor* MainSpawn = nullptr;
+    TArray<AActor*> PlayerStarts;
+    UGameplayStatics::GetAllActorsOfClass(World, APlayerStart::StaticClass(), PlayerStarts);
+
+    for (AActor* Actor : PlayerStarts)
+    {
+        if (Actor && Actor->ActorHasTag(FName("MainSpawn")))
+        {
+            MainSpawn = Actor;
+            break;
+        }
+    }
+
+    if (!MainSpawn && PlayerStarts.Num() > 0)
+    {
+        MainSpawn = PlayerStarts[0];
+    }
+
+    if (!MainSpawn)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SpawnPlayerAtMainSpawn - No PlayerStart found."));
+        return;
+    }
+
+    if (APawn* OldPawn = PC->GetPawn())
+    {
+        PC->UnPossess();
+        OldPawn->Destroy();
+    }
+
+    RestartPlayerAtTransform(PC, MainSpawn->GetActorTransform());
+
+    UE_LOG(LogTemp, Warning, TEXT("SpawnPlayerAtMainSpawn - Restarted player at main spawn."));
+}

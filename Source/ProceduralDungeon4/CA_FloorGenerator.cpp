@@ -258,8 +258,8 @@ void ACA_FloorGenerator::SpawnGeometry()
 					//Only add good exterior candidates here
 					GeneratedWallActors.Add(WallActor);
 
-					UE_LOG(LogTemp, Warning, TEXT("PortalCandidate (%d,%d) Rot=%s"),
-						x, y, *WallActor->GetActorRotation().ToString());
+					// UE_LOG(LogTemp, Warning, TEXT("PortalCandidate (%d,%d) Rot=%s"),
+					// 	x, y, *WallActor->GetActorRotation().ToString());
 				}
 
 				// //Count neighboring floor cells, which is when CurrentMap == false

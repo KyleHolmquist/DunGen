@@ -12,7 +12,20 @@ enum class EDialogueOptionAction : uint8
 	EndDialogue,
 	SpawnNewDungeon,
 	GiveQuest,
-	TurnInQuest
+	TurnInQuest,
+
+	TrainMaxHealth,
+	TrainMaxStamina,
+	TrainStaminaRegen,
+	TrainRunSpeed,
+	TrainAttackDamage,
+	TrainDodgeSpeed,
+	TrainDodgeCost,
+	TrainBartering,
+
+	ConfirmTrainingPurchase,
+	DeclineTrainingPurchase,
+	ReturnToTrainingMenu
 };
 
 USTRUCT(BlueprintType)

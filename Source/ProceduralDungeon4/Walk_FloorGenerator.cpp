@@ -234,8 +234,8 @@ void AWalk_FloorGenerator::SpawnGeometry()
 
 					GeneratedWallActors.Add(WallActor);
 
-					UE_LOG(LogTemp, Warning, TEXT("PortalCandidate (%d,%d) Rot=%s"),
-						x, y, *WallActor->GetActorRotation().ToString());
+					// UE_LOG(LogTemp, Warning, TEXT("PortalCandidate (%d,%d) Rot=%s"),
+					// 	x, y, *WallActor->GetActorRotation().ToString());
 				}
 				
 			}

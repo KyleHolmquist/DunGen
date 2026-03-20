@@ -5,6 +5,11 @@
 #include "PickupInterface.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+AWisdom::AWisdom()
+{
+	//ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+}
+
 void AWisdom::Tick(float DeltaTime)
 {
 	Super::BeginPlay();

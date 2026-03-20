@@ -15,6 +15,8 @@ class PROCEDURALDUNGEON4_API AHealthPickup : public AItem
 	GENERATED_BODY()
 
 public:
+	AHealthPickup();
+
 	virtual void Tick(float DeltaTime) override;
 
 protected:

@@ -1313,10 +1313,10 @@ void ABSP_FloorGenerator::CreateDoors(int32 ExteriorDoorCount)
 		PortalSpawnPoint->GetComponentLocation(),
 		PortalSpawnPoint->GetComponentRotation());
 
-	UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: Portal wall chosen: %s  SpawnLoc=%s  SpawnRot=%s"),
-		*ChosenWallActor->GetName(),
-		*PortalSpawnPoint->GetComponentLocation().ToString(),
-		*PortalSpawnPoint->GetComponentRotation().ToString());
+	// UE_LOG(LogTemp, Warning, TEXT("BSP_FloorGenerator: Portal wall chosen: %s  SpawnLoc=%s  SpawnRot=%s"),
+	// 	*ChosenWallActor->GetName(),
+	// 	*PortalSpawnPoint->GetComponentLocation().ToString(),
+	// 	*PortalSpawnPoint->GetComponentRotation().ToString());
 }
 
 

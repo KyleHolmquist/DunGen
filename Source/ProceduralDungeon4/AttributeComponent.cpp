@@ -68,3 +68,20 @@ void UAttributeComponent::InitWisdom(int32 InitialWisdom)
 {
 	Wisdom = InitialWisdom;
 }
+
+void UAttributeComponent::SetMaxHealth(int Amount)
+{
+	MaxHealth = Amount;
+}
+void UAttributeComponent::SetMaxStamina(int Amount)
+{
+	MaxStamina = Amount;
+}
+void UAttributeComponent::SetStaminaRegenRate(float Rate)
+{
+	StaminaRegenRate = Rate;
+}
+void UAttributeComponent::UAttributeComponent::SetDodgeCost(float Cost)
+{
+	DodgeCost = Cost;
+}

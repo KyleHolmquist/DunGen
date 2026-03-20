@@ -21,6 +21,7 @@ public:
  	void Equip(USceneComponent *InParent, FName InSocketName, AActor* NewOwner, APawn* NewInstigator);
  	void Equip(USceneComponent *InParent, FName InSocketName);
 
+    void ActivateEmbers();
     void DeactivateEmbers();
 
     void DisableSphereCollision();
@@ -30,6 +31,8 @@ public:
     void AttachMeshToSocket(USceneComponent *InParent, const FName &InSocketName);
 
     TArray<AActor*> IgnoreActors;
+
+	void Drop(const FVector& Impulse);
 
 protected:
 	virtual void BeginPlay() override;

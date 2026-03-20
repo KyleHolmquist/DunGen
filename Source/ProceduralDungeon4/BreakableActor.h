@@ -54,6 +54,9 @@ protected:
 	UFUNCTION()
 	void OnChaosBreakEvent(const FChaosBreakEvent& BreakEvent);
 
+	UFUNCTION()
+	void OnChaosCrumblingEvent(const FChaosCrumblingEvent& CrumblingEvent);
+
 private:
 
 	UPROPERTY(EditAnywhere, Category = "Breakable Properties")

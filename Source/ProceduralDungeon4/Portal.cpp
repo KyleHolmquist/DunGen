@@ -72,8 +72,8 @@ void APortal::OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 	SpawnEntrySound();
 	TeleportPlayer(Airsto);
 
-	const FString LocationString = TeleportLocation.ToString();
-	UE_LOG(LogTemp, Warning, TEXT("Teleporting to %s"), *LocationString);
+	// const FString LocationString = TeleportLocation.ToString();
+	// UE_LOG(LogTemp, Warning, TEXT("Teleporting to %s"), *LocationString);
 }
 
 void APortal::OnBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)

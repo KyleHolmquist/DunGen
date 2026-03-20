@@ -99,7 +99,18 @@ void AAirsto::Tick(float DeltaTime)
             FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaTime, 20.f);
 
         SetActorRotation(NewRot);
+
+		CreateFields(GetActorLocation());
+    	HandleDodgeImpact();
     }
+
+	if (bApplyingAttackFields)
+	{
+		if (EquippedWeapon)
+		{
+			CreateFields(EquippedWeapon->GetActorLocation());
+		}
+	}
 }
 
 void AAirsto::SetOverlappingItem(AItem* Item)
@@ -152,8 +163,6 @@ void AAirsto::InitializeEnhancedInput()
         {
 			Subsystem->ClearAllMappings();
             Subsystem->AddMappingContext(AirstoMappingContext, 0);
-
-			UE_LOG(LogTemp, Warning, TEXT("AAirsto::InitializeEnhancedInput - Mapping context added."));
 
         }
 		else
@@ -264,6 +273,7 @@ bool AAirsto::IsUnoccupied()
 
 void AAirsto::Equip(const FInputActionValue& Value)
 {
+
 	AWeapon* OverlappingWeapon = Cast<AWeapon>(OverlappingItem);
 	if (OverlappingWeapon)
 	{
@@ -272,7 +282,8 @@ void AAirsto::Equip(const FInputActionValue& Value)
 		{
 			if (EquippedWeapon)
 			{
-				EquippedWeapon->Destroy();
+				return;
+				// EquippedWeapon->Destroy();
 			}
             GetWeaponType(OverlappingWeapon);
 		}
@@ -296,6 +307,23 @@ void AAirsto::Equip(const FInputActionValue& Value)
             }
 		}
 	}
+}
+
+void AAirsto::Unequip(const FInputActionValue& Value)
+{
+
+    if (!EquippedWeapon) return;
+
+    //Drop direction = forward + slight upward
+    FVector Forward = GetActorForwardVector();
+    FVector Impulse = Forward * 300.f + FVector(0.f, 0.f, 200.f);
+
+    EquippedWeapon->Drop(Impulse);
+
+    EquippedWeapon = nullptr;
+
+    CharacterState = ECharacterState::ECS_Unequipped;
+    ActionState = EActionState::EAS_Unoccupied;
 }
 
 void AAirsto::GetWeaponType(AWeapon * OverlappingWeapon)
@@ -361,6 +389,7 @@ void AAirsto::Dodge(const FInputActionValue& Value)
         Attributes->UseStamina(Attributes->GetDodgeCost());
         DunGenOverlay->SetStaminaBarPercent(Attributes->GetStaminaPercent());
     }
+
 }
 
 void AAirsto::Interact(const FInputActionValue& Value)
@@ -474,15 +503,37 @@ void AAirsto::Die_Implementation()
 	AProceduralDungeonGameMode* GameMode = 
 		Cast<AProceduralDungeonGameMode>(GetWorld()->GetAuthGameMode());
 
-	if (GameMode)
+	GetWorldTimerManager().SetTimer
+	(
+		RespawnTimerHandle,
+		this,
+		&AAirsto::HandleRespawn,
+		RespawnDelay,
+		false
+	);
+
+	if (EquippedWeapon)
 	{
-		GameMode->SpawnPlayerAtTransform(GetActorTransform());
+		//Drop direction = forward + slight upward
+		FVector Forward = GetActorForwardVector();
+		FVector Impulse = Forward * 300.f + FVector(0.f, 0.f, 200.f);
+		EquippedWeapon->Drop(Impulse);
 	}
+
+	DisableInput(nullptr);
+
+	GetCharacterMovement()->DisableMovement();
 	
+}
+
+void AAirsto::AttackBegin()
+{
+	bApplyingAttackFields = true;
 }
 
 void AAirsto::AttackEnd()
 {
+	bApplyingAttackFields = false;
 	ActionState = EActionState::EAS_Unoccupied;
 }
 
@@ -532,6 +583,7 @@ void AAirsto::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAirsto::Look);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AAirsto::Jump);
 		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &AAirsto::Equip);
+		EnhancedInputComponent->BindAction(UnequipAction, ETriggerEvent::Triggered, this, &AAirsto::Unequip);
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AAirsto::Attack);
 		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &AAirsto::Dodge);
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AAirsto::Interact);
@@ -594,6 +646,61 @@ void AAirsto::SetSpringArmLength(float Length)
 	}
 }
 
+
+float AAirsto::GetMaxHealth() const
+{
+	if (Attributes)
+	{
+		return Attributes->GetMaxHealth();
+	}
+
+	return 0;
+}
+
+void AAirsto::SetMaxHealth(float Amount)
+{
+	if (Attributes)
+	{
+		Attributes->SetMaxHealth(Amount);
+	}
+}
+
+float AAirsto::GetMaxStamina() const
+{
+	if (Attributes)
+	{
+		return Attributes->GetMaxStamina();
+	}
+
+	return 0;
+}
+
+void AAirsto::SetMaxStamina(float Amount)
+{
+	if (Attributes)
+	{
+		Attributes->SetMaxStamina(Amount);
+	}
+}
+
+float AAirsto::GetStaminaRegenRate() const
+{
+	if (Attributes)
+	{
+		return Attributes->GetStaminaRegenRate();
+	}
+
+	return 0;
+}
+
+void AAirsto::SetStaminaRegenRate(float Amount)
+{
+	if (Attributes)
+	{
+		Attributes->SetStaminaRegenRate(Amount);
+	}
+}
+
 void AAirsto::SetBaseWalkSpeed(float Speed)
 {
 	BaseWalkSpeed = Speed;
@@ -617,11 +724,57 @@ void AAirsto::SetCurrentDodgeSpeed(float Speed)
 	CurrentDodgeSpeed = Speed;
 }
 
-int32 AAirsto::GetTreasureAmount()
+float AAirsto::GetDodgeCost() const
+{
+	if (Attributes)
+	{
+		return Attributes->GetDodgeCost();
+	}
+
+	return 0;
+}
+
+void AAirsto::SetDodgeCost(float DodgeCost)
+{
+	if (Attributes)
+	{
+		Attributes->SetDodgeCost(DodgeCost);
+	}
+}
+
+float AAirsto::GetWeaponDamage() const
+{
+	if (EquippedWeapon)
+	{
+		return EquippedWeapon->GetWeaponDamage();
+	}
+
+	return 0;
+}
+
+void AAirsto::SetWeaponDamage(float WeaponDamage)
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->SetWeaponDamage(WeaponDamage);
+	}
+}
+
+int32 AAirsto::GetTreasureAmount() const
 {
 	if (Attributes)
 	{
 		return Attributes->GetTreasure();
+	}
+
+	return 0;
+}
+
+int32 AAirsto::GetWisdomAmount() const
+{
+	if (Attributes)
+	{
+		return Attributes->GetWisdom();
 	}
 
 	return 0;
@@ -634,7 +787,6 @@ void AAirsto::SetWisdomMultiplier(float Multiplier)
 
 void AAirsto::SelectDialogueOption(int32 OptionIndex)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AAirsto::SelectDialogueOption called with index: %d"), OptionIndex);
 
 	if (!DialogueTarget)
 	{
@@ -747,8 +899,6 @@ void AAirsto::EnterDialogueInputMode()
 	PlayerController->bShowMouseCursor = true;
 	//Stop moving the camera with the mouse
 	PlayerController->SetIgnoreLookInput(true);
-
-	UE_LOG(LogTemp, Warning, TEXT("AAirsto::EnterDialogueInputMode - Dialogue input mode enabled."));
 }
 
 void AAirsto::ExitDialogueInputMode()
@@ -767,6 +917,57 @@ void AAirsto::ExitDialogueInputMode()
 	PlayerController->bShowMouseCursor = false;
 	//Allow mouse to control camera
 	PlayerController->SetIgnoreLookInput(false);
+}
 
-	UE_LOG(LogTemp, Warning, TEXT("AAirsto::ExitDialogueInputMode - Returned to game input mode."));
+void AAirsto::HandleDodgeImpact()
+{
+    FVector Start = GetActorLocation();
+    float Radius = 150.f;
+
+    TArray<FHitResult> Hits;
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    bool bHit = GetWorld()->SweepMultiByChannel(
+        Hits,
+        Start,
+        Start,
+        FQuat::Identity,
+        ECC_WorldDynamic,
+        FCollisionShape::MakeSphere(Radius),
+        Params
+    );
+
+    if (!bHit) return;
+
+    for (const FHitResult& Hit : Hits)
+    {
+        AActor* HitActor = Hit.GetActor();
+        if (!HitActor) continue;
+
+        //Only hit breakables
+        if (HitActor->ActorHasTag(TEXT("Breakable")))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Dodge hit: %s"), *HitActor->GetName());
+
+            IHitInterface* HitInterface = Cast<IHitInterface>(HitActor);
+            if (HitInterface)
+            {
+                HitInterface->Execute_GetHit(HitActor, Hit.ImpactPoint, this);
+            }
+        }
+    }
+}
+
+void AAirsto::HandleRespawn()
+{
+	AProceduralDungeonGameMode* GameMode = Cast<AProceduralDungeonGameMode>(GetWorld()->GetAuthGameMode());
+
+	if (GameMode)
+	{
+		GameMode->SpawnPlayerAtMainSpawn();
+	}
+
+	Destroy();
 }

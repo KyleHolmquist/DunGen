@@ -5,6 +5,11 @@
 #include "PickupInterface.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+AHealthPickup::AHealthPickup()
+{
+	//ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+}
+
 void AHealthPickup::Tick(float DeltaTime)
 {
 	Super::BeginPlay();

@@ -70,8 +70,16 @@ public:
 	FORCEINLINE int32 GetWisdom() const { return Wisdom; }
 	FORCEINLINE int32 GetDodgeCost() const { return DodgeCost; }
 	FORCEINLINE int32 GetAttackCost() const { return AttackCost; }
+	FORCEINLINE int32 GetMaxStamina() const { return MaxStamina; }
 	FORCEINLINE int32 GetStamina() const { return Stamina; }
+	FORCEINLINE int32 GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE int32 GetHealth() const { return Health; }
+	FORCEINLINE float GetStaminaRegenRate() { return StaminaRegenRate; }
+
+	void SetMaxHealth(int Amount);
+	void SetMaxStamina(int Amount);
+	void SetStaminaRegenRate(float Rate);
+	void SetDodgeCost(float Cost);
 
 		
 };

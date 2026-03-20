@@ -175,6 +175,11 @@ void ABaseCharacter::HandleDamage(float DamageAmount)
     }
 }
 
+void ABaseCharacter::AttackBegin()
+{
+
+}
+
 void ABaseCharacter::AttackEnd()
 {
 

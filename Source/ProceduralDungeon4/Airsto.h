@@ -60,6 +60,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category=Input)
 	UInputAction* EquipAction;
 	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* UnequipAction;
+	UPROPERTY(EditAnywhere, Category=Input)
 	UInputAction* AttackAction;
 	UPROPERTY(EditAnywhere, Category=Input)
 	UInputAction* DodgeAction;
@@ -77,6 +79,7 @@ protected:
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
     void Equip(const FInputActionValue &Value);
+    void Unequip(const FInputActionValue &Value);
     void GetWeaponType(AWeapon *OverlappingWeapon);
     void Arm(const FInputActionValue &Value);
     void Dodge(const FInputActionValue &Value);
@@ -93,6 +96,7 @@ protected:
 	void LookY(const FInputActionValue& Value);
 
     /* Combat */
+	virtual void AttackBegin() override;
 	virtual void AttackEnd() override;
 	virtual void DodgeEnd() override;
 	virtual void DisableMeshCollision() override;
@@ -151,6 +155,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Stats);
 	float WisdomMultiplier = 10.f;
 
+	UPROPERTY(EditAnywhere, Category=Respawn)
+	float RespawnDelay = 4.f;
+
+	FTimerHandle RespawnTimerHandle;
+
+	void HandleRespawn();
+
+	void HandleDodgeImpact();
+
+	UFUNCTION(BlueprintImplementableEvent)
+    void CreateFields(const FVector &FieldLocation);
+
+	bool bApplyingAttackFields = false;
+
 private:
 
     void InitializeEnhancedInput();
@@ -205,7 +223,25 @@ public:
 	void SetSpringArmLength(float Length);
 
 	UFUNCTION(BlueprintCallable)
-	float GetBaseWalkSpeed() { return BaseWalkSpeed; }
+	float GetMaxHealth() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetMaxHealth(float Amount);
+
+	UFUNCTION(BlueprintCallable)
+	float GetMaxStamina() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetMaxStamina(float Amount);
+
+	UFUNCTION(BlueprintCallable)
+	float GetStaminaRegenRate() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetStaminaRegenRate(float Rate);
+
+	UFUNCTION(BlueprintCallable)
+	float GetBaseWalkSpeed() const { return BaseWalkSpeed; }
 
 	UFUNCTION(BlueprintCallable)
 	void SetBaseWalkSpeed(float Speed);
@@ -214,19 +250,34 @@ public:
 	void SetCurrentWalkSpeed(float Speed);
 
 	UFUNCTION(BlueprintCallable)
-	float GetBaseDodgeSpeed() { return BaseDodgeSpeed; }
+	float GetBaseDodgeSpeed() const { return BaseDodgeSpeed; }
 
 	UFUNCTION(BlueprintCallable)
 	void SetBaseDodgeSpeed(float Speed);
 
 	UFUNCTION(BlueprintCallable)
+	float GetDodgeCost() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetDodgeCost(float Cost);
+
+	UFUNCTION(BlueprintCallable)
 	void SetCurrentDodgeSpeed(float Speed);
 
 	UFUNCTION(BlueprintCallable)
-	int32 GetTreasureAmount();
+	float GetWeaponDamage() const;
 
 	UFUNCTION(BlueprintCallable)
-	float GetWisdomMultiplier() { return WisdomMultiplier; }
+	void SetWeaponDamage(float Damage);
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetTreasureAmount() const;
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetWisdomAmount() const;
+
+	UFUNCTION(BlueprintCallable)
+	float GetWisdomMultiplier() const { return WisdomMultiplier; }
 
 	UFUNCTION(BlueprintCallable)
 	void SetWisdomMultiplier(float Multiplier);

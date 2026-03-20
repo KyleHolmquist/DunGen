@@ -21,6 +21,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SpawnPlayerAtTransform(const FTransform& SpawnTransform);
 
+	UFUNCTION(BlueprintCallable)
+	void SpawnPlayerAtMainSpawn();
+
 protected:
 	
 };

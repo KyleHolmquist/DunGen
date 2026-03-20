@@ -126,8 +126,8 @@ void AHolmquist_FloorGenerator::GenerateRoomLayout()
 		++TilesPlaced;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Holmquist_FloorGenerator: Placed %d floor tiles (target %d)."),
-			TilesPlaced, TargetTiles);
+	// UE_LOG(LogTemp, Log, TEXT("Holmquist_FloorGenerator: Placed %d floor tiles (target %d)."),
+	// 		TilesPlaced, TargetTiles);
 }
 
 void AHolmquist_FloorGenerator::SpawnFloorTiles()

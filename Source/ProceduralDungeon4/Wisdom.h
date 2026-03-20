@@ -13,6 +13,8 @@ class PROCEDURALDUNGEON4_API AWisdom : public AItem
 	GENERATED_BODY()
 
 public:
+	AWisdom();
+
 	virtual void Tick(float DeltaTime) override;
 
 protected:

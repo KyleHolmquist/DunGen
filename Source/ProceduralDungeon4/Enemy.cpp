@@ -539,5 +539,6 @@ void AEnemy::AddTreasureToRewardTable()
     if (TreasureClass)
     {
         RewardTable.Add(TreasureClass);
+        RewardTable.Add(TreasureClass);
     }
 }

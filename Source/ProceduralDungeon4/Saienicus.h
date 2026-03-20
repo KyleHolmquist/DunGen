@@ -5,7 +5,8 @@
 #include "CoreMinimal.h"
 #include "BaseCharacter.h"
 #include "DialogueInterface.h"
-#include "Domeara.generated.h"
+#include "MyDialogueTypes.h"
+#include "Saienicus.generated.h"
 
 class AAirsto;
 class USphereComponent;
@@ -13,17 +14,15 @@ class UDataTable;
 class ADungeonManager;
 struct FQuestAdjectiveRow;
 class UAnimationAsset;
-struct FDialogueNode;
-struct FDialogueOption;
 
 UCLASS()
-class PROCEDURALDUNGEON4_API ADomeara : public ABaseCharacter, public IDialogueInterface
+class PROCEDURALDUNGEON4_API ASaienicus : public ABaseCharacter, public IDialogueInterface
 {
 	GENERATED_BODY()
 
 public:
 
-	ADomeara();
+	ASaienicus();
 
 	virtual void Speak();
 
@@ -59,33 +58,30 @@ protected:
 	void AdvanceDialogue();
 	void EndDialogue();
 	void BuildDialogueLines();
+	void BuildTrainingMenuNode();
+	void BuildTrainingConfirmationNode();
+	void BuildTrainingResultNode(const FText& ResultText);
+	int32 GetTrainingCost(EDialogueOptionAction TrainingAction) const;
+	bool IsTrainingAction(EDialogueOptionAction Action) const;
+	bool TryPurchaseTraining();
+	FText GetTrainingDisplayName(EDialogueOptionAction TrainingAction) const;
 
 	void ShowCurrentDialogueNode();
 
-	void NewDungeonQuestInit();
-
-	// ---- Quest Text ----
-	UPROPERTY(EditDefaultsOnly, Category="Quest Text")
-	UDataTable* QuestAdjectivesTable;
-
-	UPROPERTY(VisibleAnywhere)
-	ADungeonManager* DungeonManager;
-
-	bool GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAdjectiveRow::* Field, FString& OutValue);
 	FString GetCurrentPlayerName() const;
-	FText GenerateFirstMeetingText(const UDataTable* Table, const FString& PlayerName);
-	FText GeneratePredecessorWisdomLine(const UDataTable* Table);
-	FText GenerateGreetingsText(const UDataTable* AdjectiveTable, const FString& PlayerName);
-	FText GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName, const FString& SelectedThemeName, const 	FString& SelectedTreasureName);
 
-	//Dialogue Bools
+	//Dialogue bools
 	bool bFirstMeeting = true;
-	bool bHasGivenQuest = false;
-	bool bHasTradedTreasureForWisdom = false;
+
+	EDialogueOptionAction PendingTrainingAction = EDialogueOptionAction::None;
+
+	int32 PendingTrainingCost = 0;
 
 	//Animations
 	UPROPERTY(EditAnywhere, Category=Animation)
 	UAnimationAsset* GreetingsAnim;
+	UPROPERTY(EditAnywhere, Category=Animation)
+	UAnimationAsset* TrainingMenuAnim;
 	
 	UPROPERTY(EditAnywhere, Category=Animation)
 	TArray<UAnimationAsset*> TalkingAnims;

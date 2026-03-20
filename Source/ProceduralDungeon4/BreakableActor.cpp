@@ -29,8 +29,11 @@ ABreakableActor::ABreakableActor()
 void ABreakableActor::BeginPlay()
 {
 	Super::BeginPlay();
+
 	GeometryCollection->SetNotifyBreaks(true);
+	GeometryCollection->SetNotifyCrumblings(true);
 	GeometryCollection->OnChaosBreakEvent.AddDynamic(this, &ABreakableActor::OnChaosBreakEvent);
+	GeometryCollection->OnChaosCrumblingEvent.AddDynamic(this, &ABreakableActor::OnChaosCrumblingEvent);
 
 	RewardTable.Reset();
 
@@ -58,24 +61,14 @@ void ABreakableActor::OnChaosBreakEvent(const FChaosBreakEvent& BreakEvent)
 	HandleHit();
 }
 
-void ABreakableActor::HandleHit()
+void ABreakableActor::OnChaosCrumblingEvent(const FChaosCrumblingEvent& CrumblingEvent)
 {
-	if (bBroken) return;
-	bBroken = true;
-	UWorld* World = GetWorld();
-	if (World && RewardTable.Num() > 0)
-	{
-		FVector Location = GetActorLocation();
-		Location.Z += 75.f;
-
-		const int32 Selection = FMath::RandRange(0, RewardTable.Num() - 1);
-
-		AItem* SpawnedItem = World->SpawnActor<AItem>(RewardTable[Selection], Location, GetActorRotation());
-	}
+	HandleHit();
 }
 
-void ABreakableActor::GetHit_Implementation(const FVector& ImpactPoint, AActor* Hitter)
+void ABreakableActor::HandleHit()
 {
+
 	if (bBroken) return;
 
 	SetLifeSpan(2.f);
@@ -93,10 +86,31 @@ void ABreakableActor::GetHit_Implementation(const FVector& ImpactPoint, AActor* 
 	}
 }
 
+void ABreakableActor::GetHit_Implementation(const FVector& ImpactPoint, AActor* Hitter)
+{
+	HandleHit();
+
+	// if (bBroken) return;
+
+	// SetLifeSpan(2.f);
+
+	// bBroken = true;
+	// UWorld* World = GetWorld();
+	// if (World && RewardTable.Num() > 0)
+	// {
+	// 	FVector Location = GetActorLocation();
+	// 	Location.Z += 15.f;
+
+	// 	const int32 Selection = FMath::RandRange(0, RewardTable.Num() - 1);
+
+	// 	World->SpawnActor<AItem>(RewardTable[Selection], Location, GetActorRotation());
+	// }
+}
+
 
 void ABreakableActor::SetTreasureClass(TSubclassOf<AItem> SelectedTreasureClass )
 {
-	UE_LOG(LogTemp, Warning, TEXT("We're adding treasure classes"));
 	TreasureClass = SelectedTreasureClass;
+	RewardTable.Add(TreasureClass);
 	RewardTable.Add(TreasureClass);
 }

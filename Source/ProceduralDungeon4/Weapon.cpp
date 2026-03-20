@@ -78,7 +78,7 @@ void AWeapon::BoxTrace(FHitResult& BoxHit)
 		false,
 		ActorsToIgnore,
 		//bShowBoxDebug? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		BoxHit,
 		true,
 		FColor::Red,
@@ -91,6 +91,14 @@ void AWeapon::BoxTrace(FHitResult& BoxHit)
 		IgnoreActors.AddUnique(BoxHit.GetActor());
 
 	}
+}
+
+void AWeapon::ActivateEmbers()
+{
+    if (ItemEffect)
+    {
+        ItemEffect->Activate();
+    }
 }
 
 void AWeapon::DeactivateEmbers()
@@ -141,8 +149,7 @@ void AWeapon::OnBoxOverlap(UPrimitiveComponent *OverlappedComponent, AActor *Oth
 	if (BoxHit.GetActor() == MyOwner) return;
 	
 	if (BoxHit.GetActor())
-	{
-		
+	{	
 		if (ActorIsSameType(BoxHit.GetActor()))
 		{
 			return;
@@ -150,7 +157,6 @@ void AWeapon::OnBoxOverlap(UPrimitiveComponent *OverlappedComponent, AActor *Oth
 
 		UGameplayStatics::ApplyDamage(BoxHit.GetActor(), Damage, MyOwner->GetInstigatorController(), this, UDamageType::StaticClass());
         ExecuteGetHit(BoxHit);
-		CreateFields(BoxHit.ImpactPoint);
 	}
 }
 bool AWeapon::ActorIsSameType(AActor *OtherActor)
@@ -164,4 +170,39 @@ void AWeapon::ExecuteGetHit(FHitResult &BoxHit)
     {
         HitInterface->Execute_GetHit(BoxHit.GetActor(), BoxHit.ImpactPoint, GetOwner());
     }
+}
+
+void AWeapon::Drop(const FVector& Impulse)
+{
+    DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	ActivateEmbers();
+
+    SetOwner(nullptr);
+    SetInstigator(nullptr);
+
+    //ItemState = EItemState::EIS_Hovering;
+
+    //Re-enable pickup collision
+    if (Sphere)
+    {
+        Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    }
+
+    //Enable physics so it falls
+    if (ItemMesh)
+    {
+        ItemMesh->SetSimulatePhysics(true);
+        ItemMesh->SetEnableGravity(true);
+
+        ItemMesh->AddImpulse(Impulse, NAME_None, true);
+    }
+
+    //Disable weapon damage collision
+    if (WeaponBox)
+    {
+        WeaponBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    }
+
+    IgnoreActors.Empty();
 }
