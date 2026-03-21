@@ -14,6 +14,7 @@ class UDataTable;
 class ADungeonManager;
 struct FQuestAdjectiveRow;
 class UAnimationAsset;
+class UWidgetComponent;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API ASaienicus : public ABaseCharacter, public IDialogueInterface
@@ -85,5 +86,11 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category=Animation)
 	TArray<UAnimationAsset*> TalkingAnims;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	TObjectPtr<class UWidgetComponent> InteractPromptWidget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
+	FText InteractionPrompt = FText::FromString(TEXT("[F] Speak"));
 	
 };

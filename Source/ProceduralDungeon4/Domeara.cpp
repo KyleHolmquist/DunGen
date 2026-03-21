@@ -9,12 +9,22 @@
 #include "Kismet/GameplayStatics.h"
 #include "MyDialogueTypes.h"
 #include "Engine/DataTable.h"
+#include "Portal.h"
+#include "Components/WidgetComponent.h"
+#include "InteractPromptWidget.h"
 
 
 ADomeara::ADomeara()
 {
     InteractSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Interaction Sphere"));
 	InteractSphere->SetupAttachment((GetRootComponent()));
+
+    InteractPromptWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractPromptWidget"));
+    InteractPromptWidget->SetupAttachment(RootComponent);
+    InteractPromptWidget->SetWidgetSpace(EWidgetSpace::Screen); // usually easiest for readability
+    InteractPromptWidget->SetDrawAtDesiredSize(true);
+    InteractPromptWidget->SetVisibility(false);
+    InteractPromptWidget->SetHiddenInGame(true);
 }
 
 void ADomeara::BeginPlay()
@@ -25,6 +35,19 @@ void ADomeara::BeginPlay()
 	InteractSphere->OnComponentEndOverlap.AddDynamic(this, &ADomeara::OnSphereEndOverlap);
 
     DungeonManager = Cast<ADungeonManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADungeonManager::StaticClass()));
+
+    TArray<AActor*> PortalActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), APortal::StaticClass(), PortalActors);
+
+    for (AActor* Actor : PortalActors)
+    {
+        APortal* Portal = Cast<APortal>(Actor);
+        if (Portal && Portal->bIsHomePortal)
+        {
+            HomePortal = Portal;
+            break;
+        }
+    }
 	
 }
 
@@ -35,7 +58,18 @@ void ADomeara::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
     {
         CurrentPlayer = Airsto;
         Airsto->SetDialogueTarget(this);
-        Airsto->ShowInteractButton();
+        //Airsto->ShowInteractPrompt(FText::FromString(TEXT("[F] Speak")));
+    }
+
+    if (Airsto && InteractPromptWidget)
+    {
+        InteractPromptWidget->SetVisibility(true);
+        InteractPromptWidget->SetHiddenInGame(false);
+    }
+
+    if (UInteractPromptWidget* PromptWidget = Cast<UInteractPromptWidget>(InteractPromptWidget->GetUserWidgetObject()))
+    {
+        PromptWidget->SetPromptText(InteractionPrompt);
     }
 }
 
@@ -48,7 +82,13 @@ void ADomeara::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AAct
         EndDialogue();
         CurrentPlayer = nullptr;
         Airsto->SetDialogueTarget(nullptr);
-        Airsto->HideInteractButton();
+        //Airsto->HideInteractPrompt();
+    }
+
+    if (Airsto && InteractPromptWidget)
+    {
+        InteractPromptWidget->SetVisibility(false);
+        InteractPromptWidget->SetHiddenInGame(true);
     }
 
 }
@@ -366,6 +406,11 @@ void ADomeara::BuildDialogueLines()
     FDialogueNode OpenPortalNode;
     OpenPortalNode.Line = FText::FromString("I've opened a portal that will send you there.");
     ActiveDialogueNodes.Add(OpenPortalNode);
+
+    if (HomePortal)
+    {
+        HomePortal->SetPortalActive(true);
+    }
 
     bHasGivenQuest = true;
 }

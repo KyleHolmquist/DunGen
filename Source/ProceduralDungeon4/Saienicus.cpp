@@ -8,12 +8,21 @@
 #include "Kismet/GameplayStatics.h"
 #include "MyDialogueTypes.h"
 #include "Engine/DataTable.h"
+#include "Components/WidgetComponent.h"
+#include "InteractPromptWidget.h"
 
 
 ASaienicus::ASaienicus()
 {
     InteractSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Interaction Sphere"));
 	InteractSphere->SetupAttachment((GetRootComponent()));
+
+    InteractPromptWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractPromptWidget"));
+    InteractPromptWidget->SetupAttachment(RootComponent);
+    InteractPromptWidget->SetWidgetSpace(EWidgetSpace::Screen); // usually easiest for readability
+    InteractPromptWidget->SetDrawAtDesiredSize(true);
+    InteractPromptWidget->SetVisibility(false);
+    InteractPromptWidget->SetHiddenInGame(true);
 }
 
 void ASaienicus::BeginPlay()
@@ -32,7 +41,19 @@ void ASaienicus::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActo
     {
         CurrentPlayer = Airsto;
         Airsto->SetDialogueTarget(this);
-        Airsto->ShowInteractButton();
+        //Airsto->ShowInteractPrompt(FText::FromString(TEXT("[E] Equip")));
+
+    }
+
+    if (Airsto && InteractPromptWidget)
+    {
+        InteractPromptWidget->SetVisibility(true);
+        InteractPromptWidget->SetHiddenInGame(false);
+    }
+
+    if (UInteractPromptWidget* PromptWidget = Cast<UInteractPromptWidget>(InteractPromptWidget->GetUserWidgetObject()))
+    {
+        PromptWidget->SetPromptText(InteractionPrompt);
     }
 }
 
@@ -45,7 +66,13 @@ void ASaienicus::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AA
         EndDialogue();
         CurrentPlayer = nullptr;
         Airsto->SetDialogueTarget(nullptr);
-        Airsto->HideInteractButton();
+        //Airsto->HideInteractPrompt();
+    }
+    
+    if (Airsto && InteractPromptWidget)
+    {
+        InteractPromptWidget->SetVisibility(false);
+        InteractPromptWidget->SetHiddenInGame(true);
     }
 
 }
@@ -74,11 +101,6 @@ void ASaienicus::StartDialogue()
     {
         UE_LOG(LogTemp, Warning, TEXT("Saienicus::StartDialogue - CurrentPlayer is null."));
         return;
-    }
-
-    if (GreetingsAnim)
-    {
-        GetMesh()->PlayAnimation(GreetingsAnim, false);
     }
 
     BuildDialogueLines();
@@ -117,12 +139,6 @@ void ASaienicus::AdvanceDialogue()
     }
 
     ShowCurrentDialogueNode();
-
-    if (TalkingAnims.Num() > 0)
-    {
-        int Selection = FMath::RandRange(0, TalkingAnims.Num() - 1);
-        GetMesh()->PlayAnimation(TalkingAnims[Selection], false);
-    }
 }
 
 void ASaienicus::SelectDialogueOption(int32 OptionIndex)
@@ -202,6 +218,13 @@ void ASaienicus::HandleDialogueOption(const FDialogueOption& SelectedOption)
 
             CurrentDialogueNodeIndex = 0;
             ShowCurrentDialogueNode();
+
+            if (TalkingAnims.Num() > 0)
+            {
+                int Selection = FMath::RandRange(0, TalkingAnims.Num() - 1);
+                GetMesh()->PlayAnimation(TalkingAnims[Selection], false);
+            }
+
             return;
         }
 
@@ -294,6 +317,19 @@ void ASaienicus::BuildDialogueLines()
 
     FString PlayerName = GetCurrentPlayerName();
 
+    if (!bFirstMeeting)
+    {
+        FDialogueNode GreetingsNode;
+        GreetingsNode.Line = FText::FromString(
+            FString::Printf(
+                TEXT("Hail, %s."),
+                *PlayerName
+            )
+        );
+        ActiveDialogueNodes.Add(GreetingsNode);
+
+    }
+
     if (bFirstMeeting)
     {
 		FDialogueNode GreetingNode;
@@ -304,6 +340,11 @@ void ASaienicus::BuildDialogueLines()
 			)
 		);
 		ActiveDialogueNodes.Add(GreetingNode);
+
+        if (GreetingsAnim)
+        {
+            GetMesh()->PlayAnimation(GreetingsAnim, false);
+        }
 
 		bFirstMeeting = false;
     }
@@ -544,6 +585,12 @@ void ASaienicus::BuildTrainingConfirmationNode()
 	});
 
 	ActiveDialogueNodes.Add(ConfirmNode);
+
+    if (TalkingAnims.Num() > 0)
+    {
+        int Selection = FMath::RandRange(0, TalkingAnims.Num() - 1);
+        GetMesh()->PlayAnimation(TalkingAnims[Selection], false);
+    }
 }
 
 void ASaienicus::BuildTrainingResultNode(const FText& ResultText)
@@ -564,6 +611,12 @@ void ASaienicus::BuildTrainingResultNode(const FText& ResultText)
 	});
 
 	ActiveDialogueNodes.Add(ResultNode);
+
+    if (TalkingAnims.Num() > 0)
+    {
+        int Selection = FMath::RandRange(0, TalkingAnims.Num() - 1);
+        GetMesh()->PlayAnimation(TalkingAnims[Selection], false);
+    }
 }
 
 bool ASaienicus::TryPurchaseTraining()

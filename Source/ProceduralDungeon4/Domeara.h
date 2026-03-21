@@ -15,6 +15,8 @@ struct FQuestAdjectiveRow;
 class UAnimationAsset;
 struct FDialogueNode;
 struct FDialogueOption;
+class APortal;
+class UWidgetComponent;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API ADomeara : public ABaseCharacter, public IDialogueInterface
@@ -89,5 +91,14 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category=Animation)
 	TArray<UAnimationAsset*> TalkingAnims;
+
+	UPROPERTY()
+	APortal* HomePortal;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	TObjectPtr<class UWidgetComponent> InteractPromptWidget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
+	FText InteractionPrompt = FText::FromString(TEXT("[F] Speak"));
 	
 };

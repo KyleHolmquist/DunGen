@@ -91,6 +91,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Portal)
 	bool bIsHomePortal = false;
 
+	UFUNCTION(BlueprintCallable)
+	void SetPortalActive(bool bActive);
+
 	
 
 };

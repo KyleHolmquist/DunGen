@@ -46,10 +46,13 @@ void APortal::BeginPlay()
 	{
 		TeleportLocation = GetTeleportPointLocation();
 	}
-	
 
 	DungeonManager = Cast<ADungeonManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADungeonManager::StaticClass()));
-	
+
+	if (bIsHomePortal)
+	{
+		SetPortalActive(false);
+	}
 	
 }
 
@@ -78,7 +81,7 @@ void APortal::OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 
 void APortal::OnBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (OverlappedComponent != ExitBox && OverlappedComponent != ExitBox) return;
+	if (OverlappedComponent != EntryBox && OverlappedComponent != ExitBox) return;
 
 	if (Cast<AAirsto>(OtherActor))
 	{
@@ -162,4 +165,51 @@ FVector APortal::GetExitDirection() const
 	}
 
 	return GetActorForwardVector();
+}
+
+void APortal::SetPortalActive(bool bActive)
+{
+	if (PortalMesh)
+	{
+		PortalMesh->SetVisibility(bActive, true);
+		PortalMesh->SetHiddenInGame(!bActive, true);
+	}
+
+	if (PortalEffect)
+	{
+		PortalEffect->SetVisibility(bActive, true);
+		PortalEffect->SetHiddenInGame(!bActive, true);
+
+		if (bActive)
+		{
+			PortalEffect->Activate(true);
+		}
+		else
+		{
+			PortalEffect->Deactivate();
+		}
+	}
+
+	if (EntryBox)
+	{
+		EntryBox->SetVisibility(false, true);
+		EntryBox->SetHiddenInGame(true, true);
+		EntryBox->SetCollisionEnabled(bActive ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	}
+
+	if (ExitBox)
+	{
+		ExitBox->SetVisibility(false, true);
+		ExitBox->SetHiddenInGame(true, true);
+		ExitBox->SetCollisionEnabled(bActive ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	}
+
+	if (TeleportBox)
+	{
+		TeleportBox->SetVisibility(false, true);
+		TeleportBox->SetHiddenInGame(true, true);
+		TeleportBox->SetCollisionEnabled(bActive ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	}
+
+	bCanTeleport = bActive;
 }

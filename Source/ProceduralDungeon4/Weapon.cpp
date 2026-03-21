@@ -10,7 +10,8 @@
 #include "HitInterface.h"
 #include "NiagaraComponent.h"
 #include "Airsto.h"
-
+#include "Components/WidgetComponent.h"
+#include "InteractPromptWidget.h"
 
 AWeapon::AWeapon()
 { 
@@ -25,6 +26,13 @@ AWeapon::AWeapon()
 
 	BoxTraceEnd = CreateDefaultSubobject<USceneComponent>(TEXT("Box Trace End"));
 	BoxTraceEnd->SetupAttachment(GetRootComponent());
+
+    InteractPromptWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractPromptWidget"));
+    InteractPromptWidget->SetupAttachment(RootComponent);
+    InteractPromptWidget->SetWidgetSpace(EWidgetSpace::Screen); // usually easiest for readability
+    InteractPromptWidget->SetDrawAtDesiredSize(true);
+    InteractPromptWidget->SetVisibility(false);
+    InteractPromptWidget->SetHiddenInGame(true);
 }
 
 void AWeapon::BeginPlay()
@@ -133,11 +141,42 @@ void AWeapon::AttachMeshToSocket(USceneComponent *InParent, const FName &InSocke
 void AWeapon::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
     Super::OnSphereOverlap(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult);
-    // AAirsto* Airsto = Cast<AAirsto>(OtherActor);
+    AAirsto* Airsto = Cast<AAirsto>(OtherActor);
+    if (Airsto && InteractPromptWidget && !Airsto->HasWeapon())
+    {
+        InteractPromptWidget->SetVisibility(true);
+        InteractPromptWidget->SetHiddenInGame(false);
+    }
+
+    if (InteractPromptWidget)
+	{
+		if (UInteractPromptWidget* PromptWidget = Cast<UInteractPromptWidget>(InteractPromptWidget->GetUserWidgetObject()))
+		{
+			PromptWidget->SetPromptText(InteractionPrompt);
+		}
+	}
+}
+
+void AWeapon::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	Super::OnSphereEndOverlap(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex);
+    AAirsto* Airsto = Cast<AAirsto>(OtherActor);
+
+    if (Airsto && InteractPromptWidget)
+    {
+        InteractPromptWidget->SetVisibility(false);
+        InteractPromptWidget->SetHiddenInGame(true);
+    }
+
+
 }
 
 void AWeapon::OnBoxOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
 {
+	if (!OtherActor) return;
+	if (OtherActor == this) return;
+	if (!OtherComp) return;
+
     if (ActorIsSameType(OtherActor)) return;
 
 	FHitResult BoxHit;
@@ -161,7 +200,16 @@ void AWeapon::OnBoxOverlap(UPrimitiveComponent *OverlappedComponent, AActor *Oth
 }
 bool AWeapon::ActorIsSameType(AActor *OtherActor)
 {
-    return (GetOwner()->ActorHasTag(TEXT("Enemy")) && OtherActor->ActorHasTag(TEXT("Enemy")));
+	if (!OtherActor) return false;
+	if (OtherActor == this) return true;
+
+	AActor* WeaponOwner = GetOwner();
+	APawn* WeaponInstigator = GetInstigator();
+	
+	if (OtherActor == WeaponOwner) return true;
+	if (OtherActor == WeaponInstigator) return true;
+
+    return false;
 }
 void AWeapon::ExecuteGetHit(FHitResult &BoxHit)
 {
@@ -176,10 +224,20 @@ void AWeapon::Drop(const FVector& Impulse)
 {
     DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
-	ActivateEmbers();
+	AActor* FormerOwner = GetOwner();
 
-    SetOwner(nullptr);
-    SetInstigator(nullptr);
+	SetOwner(nullptr);
+	SetInstigator(nullptr);
+
+	WeaponBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	if (FormerOwner)
+	{
+		WeaponBox->IgnoreActorWhenMoving(FormerOwner, true);
+		ItemMesh->IgnoreActorWhenMoving(FormerOwner, true);
+	}
+
+	ActivateEmbers();
 
     //ItemState = EItemState::EIS_Hovering;
 
@@ -194,7 +252,7 @@ void AWeapon::Drop(const FVector& Impulse)
     {
         ItemMesh->SetSimulatePhysics(true);
         ItemMesh->SetEnableGravity(true);
-
+   		ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
         ItemMesh->AddImpulse(Impulse, NAME_None, true);
     }
 

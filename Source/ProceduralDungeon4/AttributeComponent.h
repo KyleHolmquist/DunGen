@@ -52,10 +52,10 @@ private:
 	int32 AttackCost;
 
 	UPROPERTY(EditAnywhere, Category = "Actor Attributes")
-	int32 DodgeCost = 15.f;
+	int32 DodgeCost = 20.f;
 
 	UPROPERTY(EditAnywhere, Category = "Actor Attributes")
-	float StaminaRegenRate = 8.f;
+	float StaminaRegenRate = 2.f;
 
 public:
 	void ReceiveDamage(float Damage);

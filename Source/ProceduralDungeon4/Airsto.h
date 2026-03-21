@@ -67,6 +67,8 @@ protected:
 	UInputAction* DodgeAction;
 	UPROPERTY(EditAnywhere, Category=Input)
 	UInputAction* InteractAction;
+	UPROPERTY(EditAnywhere, Category=Input)
+	UInputAction* PauseAction;
 
 	
 	UPROPERTY(EditAnywhere, Category=Input)
@@ -84,9 +86,10 @@ protected:
     void Arm(const FInputActionValue &Value);
     void Dodge(const FInputActionValue &Value);
     void Interact(const FInputActionValue &Value);
+    void Pause(const FInputActionValue &Value);
 
     bool HasDodgeStamina();
-    bool HasAttackStamina();
+    bool HasAttackStamina();;
 
     virtual void Attack(const FInputActionValue &Value) override;
     virtual void Jump() override;
@@ -138,6 +141,7 @@ protected:
 	float SavedBrakingFrictionFactor = 0.f;
 	float SavedGroundFriction = 0.f;
 	bool bSavedDodgeFriction = false;
+	bool bHasWeapon = false;
 
 	//Dialogue
 	UPROPERTY()
@@ -168,6 +172,12 @@ protected:
     void CreateFields(const FVector &FieldLocation);
 
 	bool bApplyingAttackFields = false;
+
+    UPROPERTY(BlueprintReadOnly, Category = UI)
+    FText CurrentInteractPrompt;
+
+    UPROPERTY(BlueprintReadOnly, Category = UI)
+    bool bInteractPromptVisible = false;
 
 private:
 
@@ -206,6 +216,10 @@ public:
 	FORCEINLINE EActionState GetActionState() const { return ActionState; }
 	FORCEINLINE UDunGenOverlay* GetDunGenOverlay() { return DunGenOverlay; }
 	FORCEINLINE UDunGenDialogueOverlay* GetDunGenDialogueOverlay() { return DunGenDialogueOverlay; }
+	FORCEINLINE bool HasWeapon() { return bHasWeapon; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetHasWeapon(bool bPlayerHasWeapon);
 
 	UFUNCTION(BlueprintCallable)
 	void SetDialogueTarget(AActor* Target) { DialogueTarget = Target; }
@@ -290,5 +304,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ExitDialogueInputMode();
+
+	void ShowInteractPrompt(const FText& PromptText);
+	void HideInteractPrompt();
 
 };

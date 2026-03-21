@@ -282,10 +282,12 @@ void AAirsto::Equip(const FInputActionValue& Value)
 		{
 			if (EquippedWeapon)
 			{
+				bHasWeapon = true;
 				return;
 				// EquippedWeapon->Destroy();
 			}
             GetWeaponType(OverlappingWeapon);
+			bHasWeapon = true;
 		}
     }
 	else 
@@ -321,6 +323,7 @@ void AAirsto::Unequip(const FInputActionValue& Value)
     EquippedWeapon->Drop(Impulse);
 
     EquippedWeapon = nullptr;
+	bHasWeapon = false;
 
     CharacterState = ECharacterState::ECS_Unequipped;
     ActionState = EActionState::EAS_Unoccupied;
@@ -358,6 +361,12 @@ void AAirsto::Attack(const FInputActionValue& Value)
 	{
 		PlayAttackMontage();
 		ActionState = EActionState::EAS_Attacking;
+
+		if (Attributes && DunGenOverlay)
+		{
+			Attributes->UseStamina(Attributes->GetAttackCost());
+			DunGenOverlay->SetStaminaBarPercent(Attributes->GetStaminaPercent());
+		}
 	}
 }
 
@@ -403,6 +412,17 @@ void AAirsto::Interact(const FInputActionValue& Value)
 	}
 }
 
+void AAirsto::Pause(const FInputActionValue& Value)
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+    if (!PlayerController) return;
+
+    ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
+    if (!DunGenHUD) return;
+
+    DunGenHUD->TogglePauseMenu();
+}
+
 bool AAirsto::HasDodgeStamina()
 {
     return Attributes && Attributes->GetStamina() > Attributes->GetDodgeCost();
@@ -414,7 +434,8 @@ bool AAirsto::HasAttackStamina()
 bool AAirsto::CanAttack()
 {
 	return ActionState == EActionState::EAS_Unoccupied &&
-		CharacterState != ECharacterState::ECS_Unequipped;
+		CharacterState != ECharacterState::ECS_Unequipped &&
+		HasAttackStamina();
 }
 
 bool AAirsto::CanDisarm()
@@ -514,10 +535,14 @@ void AAirsto::Die_Implementation()
 
 	if (EquippedWeapon)
 	{
+		SetWeaponCollisionEnabled(ECollisionEnabled::NoCollision);
+
 		//Drop direction = forward + slight upward
 		FVector Forward = GetActorForwardVector();
 		FVector Impulse = Forward * 300.f + FVector(0.f, 0.f, 200.f);
 		EquippedWeapon->Drop(Impulse);
+		EquippedWeapon = nullptr;
+		CharacterState = ECharacterState::ECS_Unequipped;
 	}
 
 	DisableInput(nullptr);
@@ -587,6 +612,7 @@ void AAirsto::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AAirsto::Attack);
 		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &AAirsto::Dodge);
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AAirsto::Interact);
+		EnhancedInputComponent->BindAction(PauseAction, ETriggerEvent::Started, this, &AAirsto::Pause);
 
 		
 		EnhancedInputComponent->BindAction(LookXAction, ETriggerEvent::Triggered, this, &AAirsto::LookX);
@@ -970,4 +996,25 @@ void AAirsto::HandleRespawn()
 	}
 
 	Destroy();
+}
+
+void AAirsto::ShowInteractPrompt(const FText& PromptText)
+{
+    CurrentInteractPrompt = PromptText;
+    bInteractPromptVisible = true;
+
+    UE_LOG(LogTemp, Warning, TEXT("Prompt Shown: %s"), *PromptText.ToString());
+}
+
+void AAirsto::HideInteractPrompt()
+{
+    CurrentInteractPrompt = FText::GetEmpty();
+    bInteractPromptVisible = false;
+
+    UE_LOG(LogTemp, Warning, TEXT("Prompt Hidden"));
+}
+
+void AAirsto::SetHasWeapon(bool bPlayerHasWeapon)
+{
+	bHasWeapon = bPlayerHasWeapon;
 }
