@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 
 #include "Airsto.h"
 
@@ -24,6 +22,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Blueprint/UserWidget.h"
 #include "ProceduralDungeonGameMode.h"
+#include "DungeonManager.h"
+#include "Kismet/GameplayStatics.h"
 
 AAirsto::AAirsto()
 {
@@ -63,6 +63,14 @@ void AAirsto::BeginPlay()
 
     //InitializeEnhancedInput();
     Tags.Add(FName("EngageableTarget"));
+
+    DungeonManager = Cast<ADungeonManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADungeonManager::StaticClass()));
+
+	if (DungeonManager)
+	{
+		DungeonManager->SetPlayerEnteredPortal(false);
+	}
+
     InitializeDunGenOverlay();
 	
 }
@@ -108,7 +116,7 @@ void AAirsto::Tick(float DeltaTime)
 	{
 		if (EquippedWeapon)
 		{
-			CreateFields(EquippedWeapon->GetActorLocation());
+			//CreateFields(EquippedWeapon->GetActorLocation());
 		}
 	}
 }
@@ -121,11 +129,20 @@ void AAirsto::SetOverlappingItem(AItem* Item)
 
 void AAirsto::AddWisdom(AWisdom* Wisdom)
 {
-	if (Attributes && DunGenOverlay)
-	{
-		Attributes->AddWisdom(Wisdom->GetWisdom());
-		DunGenOverlay->SetWisdom(Attributes->GetWisdom());
-	}
+    if (!Wisdom || !DungeonManager)
+    {
+        return;
+    }
+
+    const int32 WisdomAmount = Wisdom->GetWisdom();
+
+    DungeonManager->AddToBankedWisdom(WisdomAmount);
+    DungeonManager->AddToAccruedWisdom(WisdomAmount);
+
+    if (DunGenOverlay)
+    {
+        DunGenOverlay->SetWisdom(DungeonManager->GetBankedWisdom());
+    }
 }
 
 void AAirsto::AddGold(ATreasure* Treasure)
@@ -148,11 +165,17 @@ void AAirsto::AddToGoldAmount(int Amount)
 
 void AAirsto::AddToWisdomAmount(int Amount)
 {
-	if (Attributes && DunGenOverlay)
-	{
-		Attributes->AddWisdom(Amount);
-		DunGenOverlay->SetWisdom(Attributes->GetWisdom());
-	}
+    if (!DungeonManager)
+    {
+        return;
+    }
+
+    DungeonManager->AddToBankedWisdom(Amount);
+
+    if (DunGenOverlay)
+    {
+        DunGenOverlay->SetWisdom(DungeonManager->GetBankedWisdom());
+    }
 }
 
 void AAirsto::InitializeEnhancedInput()
@@ -180,23 +203,42 @@ void AAirsto::InitializeEnhancedInput()
 }
 void AAirsto::InitializeDunGenOverlay()
 {
-    APlayerController *PlayerController = Cast<APlayerController>(GetController());
-    if (PlayerController)
+    APlayerController* PlayerController = Cast<APlayerController>(GetController());
+    if (!PlayerController)
     {
-        ADunGenHUD *DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
-        if (DunGenHUD)
-        {
+        UE_LOG(LogTemp, Warning, TEXT("InitializeDunGenOverlay: PlayerController is null"));
+        return;
+    }
 
-            DunGenOverlay = DunGenHUD->GetDunGenOverlay();
-            if (DunGenOverlay && Attributes)
-            {
-				DunGenOverlay->HideInteractButton();
-                DunGenOverlay->SetHealthBarPercent(Attributes->GetHealthPercent());
-                DunGenOverlay->SetStaminaBarPercent(1.f);
-                DunGenOverlay->SetGold(0);
-                DunGenOverlay->SetWisdom(0);
-            }
-        }
+    ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PlayerController->GetHUD());
+    if (!DunGenHUD)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("InitializeDunGenOverlay: DunGenHUD is null"));
+        return;
+    }
+
+    DunGenOverlay = DunGenHUD->GetDunGenOverlay();
+    if (!DunGenOverlay)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("InitializeDunGenOverlay: DunGenOverlay is null"));
+        return;
+    }
+
+    if (Attributes)
+    {
+        DunGenOverlay->HideInteractButton();
+        DunGenOverlay->SetHealthBarPercent(Attributes->GetHealthPercent());
+        DunGenOverlay->SetStaminaBarPercent(1.f);
+        DunGenOverlay->SetGold(0);
+    }
+
+    if (DungeonManager)
+    {
+        DunGenOverlay->SetWisdom(DungeonManager->GetBankedWisdom());
+    }
+    else
+    {
+        DunGenOverlay->SetWisdom(0);
     }
 }
 
@@ -798,12 +840,12 @@ int32 AAirsto::GetTreasureAmount() const
 
 int32 AAirsto::GetWisdomAmount() const
 {
-	if (Attributes)
-	{
-		return Attributes->GetWisdom();
-	}
+    if (DungeonManager)
+    {
+        return DungeonManager->GetBankedWisdom();
+    }
 
-	return 0;
+    return 0;
 }
 
 void AAirsto::SetWisdomMultiplier(float Multiplier)
@@ -1017,4 +1059,46 @@ void AAirsto::HideInteractPrompt()
 void AAirsto::SetHasWeapon(bool bPlayerHasWeapon)
 {
 	bHasWeapon = bPlayerHasWeapon;
+}
+
+void AAirsto::SetPlayerName(const FString& NewName)
+{
+    PlayerName = NewName.TrimStartAndEnd();
+}
+
+FString AAirsto::GetPlayerName() const
+{
+    return PlayerName;
+}
+
+bool AAirsto::HasValidPlayerName() const
+{
+    return !PlayerName.TrimStartAndEnd().IsEmpty();
+}
+
+void AAirsto::SetTreasureAmount(int32 Amount)
+{
+    if (!Attributes) return;
+
+    Attributes->SetTreasure(Amount);
+
+    if (DunGenOverlay)
+    {
+        DunGenOverlay->SetGold(Attributes->GetTreasure());
+    }
+}
+
+void AAirsto::RemoveTreasure(int32 Amount)
+{
+    if (!Attributes) return;
+
+    int32 Current = Attributes->GetTreasure();
+    int32 NewAmount = FMath::Max(0, Current - Amount);
+
+    Attributes->SetTreasure(NewAmount);
+
+    if (DunGenOverlay)
+    {
+        DunGenOverlay->SetGold(NewAmount);
+    }
 }

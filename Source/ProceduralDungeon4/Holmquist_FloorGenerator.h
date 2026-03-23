@@ -59,34 +59,34 @@ protected:
 	// -- Walls --
 
 	//Height of the walls in world units
-	UPROPERTY(EditAnywhere, Category = "Walls")
+	UPROPERTY(EditAnywhere, Category = Walls)
 	float WallHeight = 300.f;
 	
 	//Tickness of wall segments in world units
-	UPROPERTY(EditAnywhere, Category = "Walls")
+	UPROPERTY(EditAnywhere, Category = Walls)
 	float WallThickness = 40.f;
 
 	//Mesh for the Walls
-	UPROPERTY(EditAnywhere, Category = "Walls")
+	UPROPERTY(EditAnywhere, Category = Walls)
 	UStaticMesh* WallMesh;
 
 	// -- Doors --
 	
 	//How many doors to carve out
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	int32 DefaultDoorCount = 3;
 
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	float DoorWidth = 200.f;
 
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	float DoorHeight = 240.f;
 
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	float DoorDepth = 40.f;
 
 	//Mesh for the Doors
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	UStaticMesh* DoorMesh = nullptr;
 
 	//---- Internal Data ----

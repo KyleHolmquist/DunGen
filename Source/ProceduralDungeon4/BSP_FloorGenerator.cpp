@@ -15,7 +15,6 @@ enum EWallDir : uint8
 };
 
 
-// Sets default values
 ABSP_FloorGenerator::ABSP_FloorGenerator()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -123,7 +122,7 @@ void ABSP_FloorGenerator::SplitSpace(const FBSPLeaf& Region, int32 Depth)
 	}
 	else
 	{
-		//Horizontal Split: Y Axis
+		//Horizontal Split on the Y Axis
 		const int32 SplitMin = Region.Min.Y + MinLeafSize;
 		const int32 SplitMax = Region.Max.Y - MinLeafSize;
 
@@ -215,7 +214,7 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
         const FVector FloorLocation = GetActorLocation() + RoomCenter;
         const FVector FloorScale( RoomWorldWidth  / BaseMeshSize, RoomWorldHeight / BaseMeshSize, 1.f);
 
-        // -- Floor --
+        //-- Floor --
 
 		FActorSpawnParameters Params;
 		Params.Owner = this;
@@ -248,7 +247,7 @@ void ABSP_FloorGenerator::SpawnFloorPlanes()
 
 		GeneratedEmptyLocations.Add(FloorLocation);
 
-        // -- Walls as equal-length segments --
+        //-- Walls as equal-length segments --
         if (!WallTileClass || WallHeight <= 0.f) continue;
 
         const float HalfThickness = WallThickness * 0.5f;

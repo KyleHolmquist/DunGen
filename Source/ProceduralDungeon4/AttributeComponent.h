@@ -18,7 +18,6 @@ public:
 	void RegenStamina(float DeltaTime);
 
 	void InitHealth(int32 InitialHealth);
-	void InitWisdom(int32 InitialWisdom);
 
 protected:
 	virtual void BeginPlay() override;
@@ -46,9 +45,6 @@ private:
 	int32 Gold;
 
 	UPROPERTY(EditAnywhere, Category = "Actor Attributes")
-	int32 Wisdom;
-
-	UPROPERTY(EditAnywhere, Category = "Actor Attributes")
 	int32 AttackCost;
 
 	UPROPERTY(EditAnywhere, Category = "Actor Attributes")
@@ -67,7 +63,6 @@ public:
 	void AddGold(int32 NumGold);
 
 	FORCEINLINE int32 GetTreasure() const { return Gold; }
-	FORCEINLINE int32 GetWisdom() const { return Wisdom; }
 	FORCEINLINE int32 GetDodgeCost() const { return DodgeCost; }
 	FORCEINLINE int32 GetAttackCost() const { return AttackCost; }
 	FORCEINLINE int32 GetMaxStamina() const { return MaxStamina; }
@@ -80,6 +75,8 @@ public:
 	void SetMaxStamina(int Amount);
 	void SetStaminaRegenRate(float Rate);
 	void SetDodgeCost(float Cost);
+
+	void SetTreasure(int32 Amount);
 
 		
 };

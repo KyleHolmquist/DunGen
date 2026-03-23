@@ -15,6 +15,7 @@ class ADungeonManager;
 struct FQuestAdjectiveRow;
 class UAnimationAsset;
 class UWidgetComponent;
+class DungeonManager;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API ASaienicus : public ABaseCharacter, public IDialogueInterface
@@ -31,6 +32,9 @@ public:
 	void HandleDialogueOption(const FDialogueOption& SelectedOption);
 	bool CurrentNodeHasOptions() const;
 
+    UFUNCTION(BlueprintCallable, Category = Dialogue)
+    void ResetFirstMeetingState();
+
 protected:
 
 	virtual void BeginPlay() override;
@@ -40,6 +44,9 @@ protected:
 
 	UPROPERTY()
 	AAirsto* CurrentPlayer;
+
+	UPROPERTY()
+	ADungeonManager* DungeonManager = nullptr;
 
 	UPROPERTY(VisibleAnywhere, Category=Dialogue)
 	bool bInDialogue = false;
@@ -87,10 +94,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category=Animation)
 	TArray<UAnimationAsset*> TalkingAnims;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Interaction)
 	TObjectPtr<class UWidgetComponent> InteractPromptWidget;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Interaction)
 	FText InteractionPrompt = FText::FromString(TEXT("[F] Speak"));
+
+	void FacePlayer();
 	
 };

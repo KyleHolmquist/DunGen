@@ -6,6 +6,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
+#include "DungeonManager.h"
 
 AProceduralDungeonGameMode::AProceduralDungeonGameMode()
 {
@@ -80,4 +81,11 @@ void AProceduralDungeonGameMode::SpawnPlayerAtMainSpawn()
     RestartPlayerAtTransform(PC, MainSpawn->GetActorTransform());
 
     UE_LOG(LogTemp, Warning, TEXT("SpawnPlayerAtMainSpawn - Restarted player at main spawn."));
+
+    if (ADungeonManager* DungeonManager = Cast<ADungeonManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADungeonManager::StaticClass())))
+    {
+        GetWorldTimerManager().SetTimerForNextTick(
+            FTimerDelegate::CreateUObject(DungeonManager, &ADungeonManager::BeginNameEntryFlow)
+        );
+    }
 }

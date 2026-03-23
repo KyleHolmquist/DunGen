@@ -10,6 +10,8 @@
 #include "Engine/DataTable.h"
 #include "Components/WidgetComponent.h"
 #include "InteractPromptWidget.h"
+#include "DungeonManager.h"
+#include "DunGenOverlay.h"
 
 
 ASaienicus::ASaienicus()
@@ -19,7 +21,7 @@ ASaienicus::ASaienicus()
 
     InteractPromptWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractPromptWidget"));
     InteractPromptWidget->SetupAttachment(RootComponent);
-    InteractPromptWidget->SetWidgetSpace(EWidgetSpace::Screen); // usually easiest for readability
+    InteractPromptWidget->SetWidgetSpace(EWidgetSpace::Screen);
     InteractPromptWidget->SetDrawAtDesiredSize(true);
     InteractPromptWidget->SetVisibility(false);
     InteractPromptWidget->SetHiddenInGame(true);
@@ -31,6 +33,8 @@ void ASaienicus::BeginPlay()
 
 	InteractSphere->OnComponentBeginOverlap.AddDynamic(this, &ASaienicus::OnSphereOverlap);
 	InteractSphere->OnComponentEndOverlap.AddDynamic(this, &ASaienicus::OnSphereEndOverlap);
+
+    DungeonManager = Cast<ADungeonManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADungeonManager::StaticClass()));
 	
 }
 
@@ -97,11 +101,7 @@ void ASaienicus::Speak()
 
 void ASaienicus::StartDialogue()
 {
-    if (!CurrentPlayer)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Saienicus::StartDialogue - CurrentPlayer is null."));
-        return;
-    }
+    FacePlayer();
 
     BuildDialogueLines();
 
@@ -486,7 +486,11 @@ bool ASaienicus::CurrentNodeHasOptions() const
 
 FString ASaienicus::GetCurrentPlayerName() const
 {
-    
+    if (CurrentPlayer && CurrentPlayer->HasValidPlayerName())
+    {
+        return CurrentPlayer->GetPlayerName();
+    }
+
     return TEXT("Airsto");
 }
 
@@ -621,94 +625,100 @@ void ASaienicus::BuildTrainingResultNode(const FText& ResultText)
 
 bool ASaienicus::TryPurchaseTraining()
 {
-    if (!CurrentPlayer) return false;
+    if (!CurrentPlayer || DungeonManager) return false;
 
-    const int32 CurrentWisdom = CurrentPlayer->GetWisdomAmount();
-    if (CurrentWisdom < PendingTrainingCost)
-    {
-        return false;
-    }
+    if (!DungeonManager->TrySpendBankedWisdom(PendingTrainingCost)) return false;
+
+    bool bSuccess = false;
 
     switch (PendingTrainingAction)
     {
         case EDialogueOptionAction::TrainMaxHealth:
         {
-            CurrentPlayer->AddToWisdomAmount(-PendingTrainingCost);
 
             int32 CurrentMax = CurrentPlayer->GetMaxHealth();
             int32 NewMax = CurrentMax + FMath::RoundToInt(CurrentMax * 0.25f);
             CurrentPlayer->SetMaxHealth(NewMax);
-            return true;
+            
+            bSuccess = true;
+            break;
         }
 
         case EDialogueOptionAction::TrainMaxStamina:
         {
-            CurrentPlayer->AddToWisdomAmount(-PendingTrainingCost);
 
             int32 CurrentMax = CurrentPlayer->GetMaxStamina();
             int32 NewMax = CurrentMax + FMath::RoundToInt(CurrentMax * 0.25f);
             CurrentPlayer->SetMaxStamina(NewMax);
-            return true;
+            
+            bSuccess = true;
+            break;
         }
 
         case EDialogueOptionAction::TrainStaminaRegen:
         {
-            CurrentPlayer->AddToWisdomAmount(-PendingTrainingCost);
 
             float CurrentRate = CurrentPlayer->GetStaminaRegenRate();
             float NewRate = CurrentRate + CurrentRate * 0.25f;
             CurrentPlayer->SetStaminaRegenRate(NewRate);
-            return true;
+            
+            bSuccess = true;
+            break;
         }
 
         case EDialogueOptionAction::TrainRunSpeed:
         {
-            CurrentPlayer->AddToWisdomAmount(-PendingTrainingCost);
 
             float CurrentSpeed = CurrentPlayer->GetBaseWalkSpeed();
             float NewSpeed = CurrentSpeed + CurrentSpeed * 0.25f;
             CurrentPlayer->SetBaseWalkSpeed(NewSpeed);
-            return true;
+            
+            bSuccess = true;
+            break;
         }
 
         case EDialogueOptionAction::TrainAttackDamage:
         {
-            CurrentPlayer->AddToWisdomAmount(-PendingTrainingCost);
 
             float CurrentDamage = CurrentPlayer->GetWeaponDamage();
             float NewDamage = CurrentDamage + CurrentDamage * 0.25f;
             CurrentPlayer->SetWeaponDamage(NewDamage);
-            return true;
+            
+            bSuccess = true;
+            break;
         }
 
         case EDialogueOptionAction::TrainDodgeSpeed:
         {
-            CurrentPlayer->AddToWisdomAmount(-PendingTrainingCost);
 
             float CurrentSpeed = CurrentPlayer->GetBaseDodgeSpeed();
             float NewSpeed = CurrentSpeed + CurrentSpeed * 0.25f;
             CurrentPlayer->SetBaseDodgeSpeed(NewSpeed);
-            return true;
+            
+            bSuccess = true;
+            break;
         }
 
         case EDialogueOptionAction::TrainDodgeCost:
         {
-            CurrentPlayer->AddToWisdomAmount(-PendingTrainingCost);
 
             float CurrentCost = CurrentPlayer->GetDodgeCost();
             float NewCost = CurrentCost - CurrentCost * 0.25f;
             CurrentPlayer->SetDodgeCost(NewCost);
-            return true;
+            
+            bSuccess = true;
+            break;
         }
 
         case EDialogueOptionAction::TrainBartering:
         {
-            CurrentPlayer->AddToWisdomAmount(-PendingTrainingCost);
 
             float CurrentRate = CurrentPlayer->GetWisdomMultiplier();
             float NewRate = CurrentRate + CurrentRate * 0.25f;
             CurrentPlayer->SetWisdomMultiplier(NewRate);
-            return true;
+            
+            bSuccess = true;
+            break;
         }
 
         default:
@@ -719,4 +729,42 @@ bool ASaienicus::TryPurchaseTraining()
             return false;
         }
     }
+
+    if (bSuccess)
+    {
+        if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+        {
+            if (ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PC->GetHUD()))
+            {
+                if (UDunGenOverlay* Overlay = DunGenHUD->GetDunGenOverlay())
+                {
+                    Overlay->SetWisdom(DungeonManager->GetBankedWisdom());
+                }
+            }
+        }
+    }
+
+    return bSuccess;
+}
+
+void ASaienicus::ResetFirstMeetingState()
+{
+    bFirstMeeting = true;
+}
+
+void ASaienicus::FacePlayer()
+{
+    if (!CurrentPlayer) return;
+
+    FVector NPC_Location = GetActorLocation();
+    FVector Player_Location = CurrentPlayer->GetActorLocation();
+
+    FVector Direction = Player_Location - NPC_Location;
+    Direction.Z = 0.f;
+
+    if (Direction.IsNearlyZero()) return;
+
+    FRotator TargetRotation = Direction.Rotation();
+
+    SetActorRotation(FRotator(0.f, TargetRotation.Yaw, 0.f));
 }

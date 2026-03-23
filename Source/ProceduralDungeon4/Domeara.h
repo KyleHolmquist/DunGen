@@ -33,6 +33,9 @@ public:
 	void HandleDialogueOption(const FDialogueOption& SelectedOption);
 	bool CurrentNodeHasOptions() const;
 
+    UFUNCTION(BlueprintCallable, Category = Dialogue)
+    void ResetFirstMeetingState();
+
 protected:
 
 	virtual void BeginPlay() override;
@@ -81,6 +84,7 @@ protected:
 	FText GenerateQuestText(const UDataTable* AdjectiveTable, const FString& PlayerName, const FString& SelectedThemeName, const 	FString& SelectedTreasureName);
 
 	//Dialogue Bools
+	
 	bool bFirstMeeting = true;
 	bool bHasGivenQuest = false;
 	bool bHasTradedTreasureForWisdom = false;
@@ -95,10 +99,12 @@ protected:
 	UPROPERTY()
 	APortal* HomePortal;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Interaction)
 	TObjectPtr<class UWidgetComponent> InteractPromptWidget;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Interaction)
 	FText InteractionPrompt = FText::FromString(TEXT("[F] Speak"));
+
+	void FacePlayer();
 	
 };

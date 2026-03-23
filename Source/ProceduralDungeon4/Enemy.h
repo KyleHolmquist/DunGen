@@ -60,7 +60,6 @@ public:
 	/** </IHitInterface*/
 
 	void SetMaxHealth(int SelectedMaxHealth);
-	void SetWisdomAmount(int SelectedWisdomAmount);
 	void SetHealthPickupAmount(int SelectedHealthPickupAmount);
 	void SetTreasureClass(TSubclassOf<AItem> SelectedTreasureClass);
 	void AddTreasureToRewardTable();

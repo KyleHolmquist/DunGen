@@ -9,6 +9,8 @@
 #include "DunGenMainMenu.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "DungeonManager.h"
+#include "DunGenNameEntryMenu.h"
 
 
 void ADunGenHUD::BeginPlay()
@@ -64,6 +66,12 @@ void ADunGenHUD::StartGame()
     UE_LOG(LogTemp, Warning, TEXT("DunGen:: StartGame"));
 
     HideMainMenu();
+
+    if (ADungeonManager* DungeonManager = Cast<ADungeonManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ADungeonManager::StaticClass())))
+    {
+        
+        DungeonManager->BeginNameEntryFlow();
+    }
 }
 
 void ADunGenHUD::ShowPauseMenu()
@@ -258,4 +266,46 @@ void ADunGenHUD::GoToMainMenuFromPause()
 
     //Show main menu
     ShowMainMenu();
+}
+
+void ADunGenHUD::ShowNameEntryMenu()
+{
+    UE_LOG(LogTemp, Warning, TEXT("DunGen:: ShowNameEntryMenu"));
+
+    APlayerController* Controller = GetOwningPlayerController();
+    if (!Controller) return;
+
+    if (!DunGenNameEntryMenu && DunGenNameEntryMenuClass)
+    {
+        DunGenNameEntryMenu = CreateWidget<UDunGenNameEntryMenu>(Controller, DunGenNameEntryMenuClass);
+    }
+
+    if (!DunGenNameEntryMenu) return;
+
+    if (!DunGenNameEntryMenu->IsInViewport())
+    {
+        DunGenNameEntryMenu->AddToViewport();
+    }
+
+    Controller->bShowMouseCursor = true;
+
+    FInputModeUIOnly InputMode;
+    InputMode.SetWidgetToFocus(DunGenNameEntryMenu->TakeWidget());
+    Controller->SetInputMode(InputMode);
+}
+
+void ADunGenHUD::HideNameEntryMenu()
+{
+    if (DunGenNameEntryMenu && DunGenNameEntryMenu->IsInViewport())
+    {
+        DunGenNameEntryMenu->RemoveFromParent();
+    }
+
+    APlayerController* Controller = GetOwningPlayerController();
+    if (!Controller) return;
+
+    Controller->bShowMouseCursor = false;
+
+    FInputModeGameOnly InputMode;
+    Controller->SetInputMode(InputMode);
 }

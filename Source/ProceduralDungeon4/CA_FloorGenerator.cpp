@@ -45,7 +45,6 @@ void ACA_FloorGenerator::GenerateModule()
 void ACA_FloorGenerator::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-    // No per-frame logic needed for now
 }
 
 void ACA_FloorGenerator::InitializeMap()
@@ -241,7 +240,7 @@ void ACA_FloorGenerator::SpawnGeometry()
 				//Remember this wall actor at (x, y)
 				WallActorMap[Index(x, y)] = WallActor;
 
-				// Check whether this wall is a valid portal candidate
+				//Check whether this wall is a valid portal candidate
 				FIntPoint InteriorFloorCell;
 				if (IsValidPortalCandidate(x, y, InteriorFloorCell))
 				{
@@ -519,7 +518,7 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 		WallActor->Destroy();
 		WallSegments.RemoveAtSwap(SegIndex);
 
-		// -- Carve a straight corridor from the wall cell to the nearest edge --
+		//-- Carve a straight corridor from the wall cell to the nearest edge --
 
 		//Direction from interior floor cell to wall cell
 		int32 DirX = Seg.WallCell.X - FloorCell.X;
@@ -584,7 +583,7 @@ void ACA_FloorGenerator::CreateDoors(int32 DoorCount)
 					}
 				}
 
-				// Stop carving if border is reached
+				//Stop carving if border is reached
 				if (CX == 0 || CX == MapWidth - 1 || CY == 0 || CY == MapHeight - 1)
 				{
 					break;

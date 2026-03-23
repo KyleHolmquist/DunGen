@@ -8,12 +8,12 @@
 // Sets default values
 AHolmquist_FloorGenerator::AHolmquist_FloorGenerator()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+ 	//Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
 }
 
-// Called when the game starts or when spawned
+//Called when the game starts or when spawned
 void AHolmquist_FloorGenerator::BeginPlay()
 {
 	Super::BeginPlay();
@@ -36,7 +36,7 @@ void AHolmquist_FloorGenerator::GenerateModule()
 	bHasFinishedGenerating = true;
 }
 
-// Called every frame
+//Called every frame
 void AHolmquist_FloorGenerator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -126,7 +126,7 @@ void AHolmquist_FloorGenerator::GenerateRoomLayout()
 		++TilesPlaced;
 	}
 
-	// UE_LOG(LogTemp, Log, TEXT("Holmquist_FloorGenerator: Placed %d floor tiles (target %d)."),
+	//UE_LOG(LogTemp, Log, TEXT("Holmquist_FloorGenerator: Placed %d floor tiles (target %d)."),
 	// 		TilesPlaced, TargetTiles);
 }
 
@@ -205,7 +205,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 				return Grid[Index(NX, NY)];
 			};
 
-			// EAST (+X) edge  → vertical wall (length along Y)
+			//EAST (+X) edge  → vertical wall (length along Y)
 			{
 				const bool bHasEastFloor = HasFloorAt(x + 1, y);
 				if (!bHasEastFloor)
@@ -236,9 +236,9 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 							//WallComp->SetStaticMesh(WallMesh);
 							WallComp->SetMobility(EComponentMobility::Movable);
 
-							const float ScaleX = TileSize      / BaseSize; // length
-							const float ScaleY = WallThickness / BaseSize; // thickness
-							const float ScaleZ = WallHeight    / BaseSize; // height
+							const float ScaleX = TileSize      / BaseSize;
+							const float ScaleY = WallThickness / BaseSize;
+							const float ScaleZ = WallHeight    / BaseSize;
 
 							WallActor->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
 
@@ -251,7 +251,6 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 					}
 				}
 
-				// WEST (-X) edge → vertical wall
 				{
 					const bool bHasWestFloor = HasFloorAt(x - 1, y);
 					if (!bHasWestFloor)
@@ -346,7 +345,7 @@ void AHolmquist_FloorGenerator::SpawnFloorTiles()
 					}
 				}
 
-				// SOUTH (-Y) edge → horizontal wall
+				//SOUTH (-Y) edge → horizontal wall
 				{
 					const bool bHasSouthFloor = HasFloorAt(x, y - 1);
 					if (!bHasSouthFloor)

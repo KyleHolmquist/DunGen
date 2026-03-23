@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -39,7 +39,7 @@ class PROCEDURALDUNGEON4_API ABSP_FloorGenerator : public AFloorGeneratorBase
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
+	//Sets default values for this actor's properties
 	ABSP_FloorGenerator();
 
 	//Minimum leaf size in cells
@@ -58,72 +58,72 @@ public:
 	int32 DoorsPerRoomMax = 2;
 
 protected:
-	// Called when the game starts or when spawned
+	//Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 	virtual void GenerateModule() override;
 
 	//Size of the whole map in grid cells
-	UPROPERTY(EditAnywhere, Category = "BSP")
+	UPROPERTY(EditAnywhere, Category = BSP)
 	FIntPoint MapSize = FIntPoint(MapWidth, MapHeight);
 
-	// //Size of one grid cell in world units (cm)
-	// UPROPERTY(EditAnywhere, Category = "BSP")
-	// float TileSize = 100.f;
+	////Size of one grid cell in world units (cm)
+	//UPROPERTY(EditAnywhere, Category = "BSP")
+	//float TileSize = 100.f;
 
 	//Plane mesh to use for each room floor
-	UPROPERTY(EditAnywhere, Category = "BSP")
+	UPROPERTY(EditAnywhere, Category = BSP)
 	UStaticMesh* FloorMesh;
 
 	//Z Offset for the floor
-	UPROPERTY(EditAnywhere, Category = "BSP")
+	UPROPERTY(EditAnywhere, Category = BSP)
 	float FloorZ = 0.f;
 
-	// How much to shrink rooms inside each leaf (in grid cells)
-	UPROPERTY(EditAnywhere, Category = "Rooms")
+	//How much to shrink rooms inside each leaf (in grid cells)
+	UPROPERTY(EditAnywhere, Category = Rooms)
 	int32 RoomPaddingMin = 1;
 
-	UPROPERTY(EditAnywhere, Category = "Rooms")
+	UPROPERTY(EditAnywhere, Category = Rooms)
 	int32 RoomPaddingMax = 3;
 
-	// ---- Walls ----
+	//---- Walls ----
 
 	//Mesh used for walls
-	UPROPERTY(EditAnywhere, Category = "Walls")
+	UPROPERTY(EditAnywhere, Category = Walls)
 	UStaticMesh* WallMesh;
 	
 	//Height of walls
-	UPROPERTY(EditAnywhere, Category = "Walls")
+	UPROPERTY(EditAnywhere, Category = Walls)
 	float WallHeight = 300.f;
 
 	//Thickness of the walls
-	UPROPERTY(EditAnywhere, Category = "Walls")
+	UPROPERTY(EditAnywhere, Category = Walls)
 	float WallThickness = 50.f;
 
 	//Length of a single wall segment in grid cells
-	UPROPERTY(EditAnywhere, Category = "Walls")
+	UPROPERTY(EditAnywhere, Category = Walls)
 	int32 WallSegmentCells = 1;
 
 	//All spawned Wall segments
 	UPROPERTY()
 	TArray<FDungeonWallSegment> WallSegments;
 
-	// Which BSP room (leaf) each interior grid cell belongs to
+	//Which BSP room (leaf) each interior grid cell belongs to
     UPROPERTY()
     TMap<FIntPoint, int32> CellToRoomIndex;
 
-	// -- Doors --
+	//-- Doors --
 	
 	//How many doors to carve out
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	int32 DefaultDoorCount = 2;
 
 	//Mesh for the Doors
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	UStaticMesh* DoorMesh = nullptr;
 
 	//Width of a door opening in world units
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	float DoorWidth = 200.f;
 
 	//Random seed for reproducibility
@@ -146,7 +146,7 @@ private:
 	void CreateDoors(int32 DoorCount);
 
 public:	
-	// Called every frame
+	//Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void BuildCeiling() override;

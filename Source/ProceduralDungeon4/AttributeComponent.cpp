@@ -40,11 +40,6 @@ bool UAttributeComponent::IsAlive()
 	return Health > 0.f;
 }
 
-void UAttributeComponent::AddWisdom(int32 WisdomAmount)
-{
-	Wisdom += WisdomAmount;
-}
-
 void UAttributeComponent::AddGold(int32 NumGold)
 {
 	Gold += NumGold;
@@ -64,10 +59,6 @@ void UAttributeComponent::InitHealth(int32 InitialHealth)
 {
 	Health = InitialHealth;
 }
-void UAttributeComponent::InitWisdom(int32 InitialWisdom)
-{
-	Wisdom = InitialWisdom;
-}
 
 void UAttributeComponent::SetMaxHealth(int Amount)
 {
@@ -84,4 +75,9 @@ void UAttributeComponent::SetStaminaRegenRate(float Rate)
 void UAttributeComponent::UAttributeComponent::SetDodgeCost(float Cost)
 {
 	DodgeCost = Cost;
+}
+
+void UAttributeComponent::SetTreasure(int32 Amount)
+{
+    Gold = Amount;
 }

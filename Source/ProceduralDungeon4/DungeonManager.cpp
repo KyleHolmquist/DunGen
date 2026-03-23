@@ -22,8 +22,11 @@
 #include "PortalManager.h"
 #include "Portal.h"
 #include "Components/SceneComponent.h"
+#include "Domeara.h"
+#include "Saienicus.h"
+#include "Airsto.h"
+#include "DunGenHUD.h"
 
-// -- Forward declarations --
 static FVector ComputeOutwardFromBounds2D(AFloorGeneratorBase* Module, const FVector& DoorWorld);
 static bool SnapModuleDoorToTarget(AFloorGeneratorBase* ModuleB, int32 DoorBIndex, const FVector& TargetDoorWorldLocation, const FVector& TargetDoorForward2D);
 
@@ -1537,6 +1540,125 @@ void ADungeonManager::SpawnNewDungeon()
 		0.1f,      // wait 0.1 second
 		false
 	);
+}
+
+void ADungeonManager::ResetNPCFirstMeetings()
+{
+    TArray<AActor*> FoundActors;
+
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADomeara::StaticClass(), FoundActors);
+    for (AActor* Actor : FoundActors)
+    {
+        if (ADomeara* Domeara = Cast<ADomeara>(Actor))
+        {
+            Domeara->ResetFirstMeetingState();
+        }
+    }
+
+    FoundActors.Empty();
+
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASaienicus::StaticClass(), FoundActors);
+    for (AActor* Actor : FoundActors)
+    {
+        if (ASaienicus* Saienicus = Cast<ASaienicus>(Actor))
+        {
+            Saienicus->ResetFirstMeetingState();
+        }
+    }
+}
+
+void ADungeonManager::BeginNameEntryFlow()
+{
+    ResetNPCFirstMeetings();
+
+    APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+    if (!PC)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DungeonManager::BeginNameEntryFlow - PlayerController is null."));
+        return;
+    }
+
+    if (AAirsto* Airsto = Cast<AAirsto>(UGameplayStatics::GetPlayerCharacter(this, 0)))
+    {
+        Airsto->SetPlayerName(TEXT(""));
+        Airsto->DisableInput(PC);
+    }
+
+    if (ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PC->GetHUD()))
+    {
+        DunGenHUD->ShowNameEntryMenu();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DungeonManager::BeginNameEntryFlow - DunGenHUD is null."));
+    }
+}
+
+void ADungeonManager::SubmitPlayerName(const FString& EnteredName)
+{
+    const FString CleanName = EnteredName.TrimStartAndEnd();
+
+    if (CleanName.IsEmpty())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DungeonManager::SubmitPlayerName - Entered name is empty."));
+        return;
+    }
+
+    APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+    if (!PC)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DungeonManager::SubmitPlayerName - PlayerController is null."));
+        return;
+    }
+
+    if (AAirsto* Airsto = Cast<AAirsto>(UGameplayStatics::GetPlayerCharacter(this, 0)))
+    {
+        Airsto->SetPlayerName(CleanName);
+        Airsto->EnableInput(PC);
+    }
+
+    ResetNPCFirstMeetings();
+
+    if (ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(PC->GetHUD()))
+    {
+        DunGenHUD->HideNameEntryMenu();
+    }
+}
+
+void ADungeonManager::SetBankedWisdom(int32 Amount)
+{
+    BankedWisdom = FMath::Max(0, Amount);
+}
+
+void ADungeonManager::AddToBankedWisdom(int32 Amount)
+{
+    BankedWisdom = FMath::Max(0, BankedWisdom + Amount);
+}
+
+bool ADungeonManager::TrySpendBankedWisdom(int32 Amount)
+{
+    if (Amount <= 0)
+    {
+        return true;
+    }
+
+    if (BankedWisdom < Amount)
+    {
+        return false;
+    }
+
+    BankedWisdom -= Amount;
+    return true;
+}
+
+void ADungeonManager::SetAccruedWisdom(int32 Amount)
+{
+    AccruedWisdom = FMath::Max(0, Amount);
+}
+
+void ADungeonManager::AddToAccruedWisdom(int32 Amount)
+{
+    AccruedWisdom = FMath::Max(0, AccruedWisdom + Amount);
 }
 
 void ADungeonManager::OldSpawn()

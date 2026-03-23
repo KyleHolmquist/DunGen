@@ -12,6 +12,7 @@
 #include "Portal.h"
 #include "Components/WidgetComponent.h"
 #include "InteractPromptWidget.h"
+#include "DunGenOverlay.h"
 
 
 ADomeara::ADomeara()
@@ -21,7 +22,7 @@ ADomeara::ADomeara()
 
     InteractPromptWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractPromptWidget"));
     InteractPromptWidget->SetupAttachment(RootComponent);
-    InteractPromptWidget->SetWidgetSpace(EWidgetSpace::Screen); // usually easiest for readability
+    InteractPromptWidget->SetWidgetSpace(EWidgetSpace::Screen);
     InteractPromptWidget->SetDrawAtDesiredSize(true);
     InteractPromptWidget->SetVisibility(false);
     InteractPromptWidget->SetHiddenInGame(true);
@@ -48,6 +49,11 @@ void ADomeara::BeginPlay()
             break;
         }
     }
+
+    
+	bFirstMeeting = true;
+	bHasGivenQuest = false;
+	bHasTradedTreasureForWisdom = false;
 	
 }
 
@@ -113,11 +119,7 @@ void ADomeara::Speak()
 
 void ADomeara::StartDialogue()
 {
-    if (!CurrentPlayer)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Domeara::StartDialogue - CurrentPlayer is null."));
-        return;
-    }
+    FacePlayer();
 
     BuildDialogueLines();
 
@@ -268,7 +270,6 @@ void ADomeara::EndDialogue()
 
 void ADomeara::BuildDialogueLines()
 {
-
     if (!DungeonManager)
     {
         UE_LOG(LogTemp, Warning, TEXT("Domeara::BuildDialogueLines - DungeonManager is null."));
@@ -280,18 +281,6 @@ void ADomeara::BuildDialogueLines()
     FString PlayerName = GetCurrentPlayerName();
     FString SelectedThemeText = DungeonManager->GetSelectedThemeText();
     FString SelectedTreasureText = DungeonManager->GetSelectedTreasureText();
-    if (!bFirstMeeting && !DungeonManager->HasPlayerEnteredPortal())
-    {
-        FText GreetingsLine = GenerateGreetingsText
-        (
-            QuestAdjectivesTable,
-            PlayerName
-        );
-
-        FDialogueNode GreetingsNode;
-        GreetingsNode.Line = GreetingsLine;
-        ActiveDialogueNodes.Add(GreetingsNode);
-    }
 
     if (bFirstMeeting)
     {
@@ -316,17 +305,28 @@ void ADomeara::BuildDialogueLines()
 
         bFirstMeeting = false;
     }
+    else if (!DungeonManager->HasPlayerEnteredPortal() && !bHasGivenQuest)
+    {
+        FText GreetingsLine = GenerateGreetingsText
+        (
+            QuestAdjectivesTable,
+            PlayerName
+        );
+
+        FDialogueNode GreetingsNode;
+        GreetingsNode.Line = GreetingsLine;
+        ActiveDialogueNodes.Add(GreetingsNode);
+    }
 
     if (!DungeonManager->HasPlayerEnteredPortal() && bHasGivenQuest)
     {
-
         FDialogueNode MustTravelNode;
         MustTravelNode.Line = FText::Format
-            (
-                FText::FromString("You must travel through the portal to the {0} to retrieve the {1}."),
-                FText::FromString(SelectedThemeText),
-                FText::FromString(SelectedTreasureText)
-            );
+        (
+            FText::FromString("You must travel through the portal to the {0} to retrieve the {1}."),
+            FText::FromString(SelectedThemeText),
+            FText::FromString(SelectedTreasureText)
+        );
         ActiveDialogueNodes.Add(MustTravelNode);
         return;
     }
@@ -334,9 +334,9 @@ void ADomeara::BuildDialogueLines()
     if (DungeonManager->HasPlayerEnteredPortal())
     {
         FDialogueNode GladYoureAliveNode;
-        FString Line = 
+        FString Line =
             TEXT("I'm glad to see you've returned in one piece, {PlayerName}.");
-            Line = Line.Replace(TEXT("{PlayerName}"), *PlayerName);
+        Line = Line.Replace(TEXT("{PlayerName}"), *PlayerName);
         GladYoureAliveNode.Line = FText::FromString(Line);
         ActiveDialogueNodes.Add(GladYoureAliveNode);
 
@@ -355,39 +355,40 @@ void ADomeara::BuildDialogueLines()
             );
 
             ActiveDialogueNodes.Add(ItsGivingWisdomNode);
+            DungeonManager->AddToAccruedWisdom(WisdomAmount);
+            DungeonManager->AddToBankedWisdom(WisdomAmount);
+
+            if (DungeonManager)
+            {
+                DungeonManager->AddToBankedWisdom(WisdomAmount);
+                DungeonManager->AddToAccruedWisdom(WisdomAmount);
+            }
 
             if (CurrentPlayer)
             {
-                CurrentPlayer->AddToWisdomAmount(WisdomAmount);
+                if (ADunGenHUD* DunGenHUD = Cast<ADunGenHUD>(UGameplayStatics::GetPlayerController(this, 0)->GetHUD()))
+                {
+                    if (UDunGenOverlay* Overlay = DunGenHUD->GetDunGenOverlay())
+                    {
+                        Overlay->SetWisdom(DungeonManager ? DungeonManager->GetBankedWisdom() : 0);
+                    }
+                }
+
+                CurrentPlayer->SetTreasureAmount(0);
             }
 
             bHasTradedTreasureForWisdom = true;
         }
 
-        if (bHasTradedTreasureForWisdom)
+        FDialogueNode ContinueNode;
+        ContinueNode.Line = FText::FromString("Would you like me to open another portal?");
+        ContinueNode.Options =
         {
-            FDialogueNode ReadyNode;
-            ReadyNode.Line = FText::FromString("Are you ready for your next assignment?");
+            FDialogueOption{FText::FromString("Yes"), EDialogueOptionAction::SpawnNewDungeon, INDEX_NONE},
+            FDialogueOption{FText::FromString("No"), EDialogueOptionAction::EndDialogue, INDEX_NONE}
+        };
+        ActiveDialogueNodes.Add(ContinueNode);
 
-            FDialogueOption YesOption;
-            YesOption.OptionText = FText::FromString("Yes.");
-            YesOption.Action = EDialogueOptionAction::SpawnNewDungeon;
-            //YesOption.NextNodeIndex = INDEX_NONE;
-
-            FDialogueOption NoOption;
-            NoOption.OptionText = FText::FromString("Not yet.");
-            NoOption.Action = EDialogueOptionAction::EndDialogue;
-            NoOption.NextNodeIndex = INDEX_NONE;
-
-            ReadyNode.Options.Add(YesOption);
-            ReadyNode.Options.Add(NoOption);
-
-            ActiveDialogueNodes.Add(ReadyNode);
-
-            return;
-        }
-
-        
         return;
     }
 
@@ -491,7 +492,11 @@ bool ADomeara::GetRandomAdjectiveValue(const UDataTable* Table, FString FQuestAd
 
 FString ADomeara::GetCurrentPlayerName() const
 {
-    
+    if (CurrentPlayer && CurrentPlayer->HasValidPlayerName())
+    {
+        return CurrentPlayer->GetPlayerName();
+    }
+
     return TEXT("Airsto");
 }
 
@@ -614,4 +619,26 @@ void ADomeara::NewDungeonQuestInit()
     bInDialogue = true;
 
     ShowCurrentDialogueNode();
+}
+
+void ADomeara::ResetFirstMeetingState()
+{
+    bFirstMeeting = true;
+}
+
+void ADomeara::FacePlayer()
+{
+    if (!CurrentPlayer) return;
+
+    FVector NPC_Location = GetActorLocation();
+    FVector Player_Location = CurrentPlayer->GetActorLocation();
+
+    FVector Direction = Player_Location - NPC_Location;
+    Direction.Z = 0.f;
+
+    if (Direction.IsNearlyZero()) return;
+
+    FRotator TargetRotation = Direction.Rotation();
+
+    SetActorRotation(FRotator(0.f, TargetRotation.Yaw, 0.f));
 }

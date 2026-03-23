@@ -9,6 +9,7 @@ class UDunGenDialogueOverlay;
 class UDunGenPauseMenu;
 class UDunGenControlsMenu;
 class UDunGenMainMenu;
+class UDunGenNameEntryMenu;
 
 UENUM(BlueprintType)
 enum class EControlsMenuSource : uint8
@@ -59,6 +60,12 @@ private:
 	UPROPERTY()
 	EControlsMenuSource ControlsMenuSource = EControlsMenuSource::None;
 
+	UPROPERTY(EditDefaultsOnly, Category = DunGen)
+	TSubclassOf<UDunGenNameEntryMenu> DunGenNameEntryMenuClass;
+
+	UPROPERTY()
+	UDunGenNameEntryMenu* DunGenNameEntryMenu;
+
 public:
 	FORCEINLINE UDunGenOverlay* GetDunGenOverlay() const { return DunGenOverlay; }
 	FORCEINLINE UDunGenDialogueOverlay* GetDunGenDialogueOverlay() const { return DunGenDialogueOverlay; }
@@ -85,6 +92,10 @@ public:
 	void HideMainMenu();
 	UFUNCTION(BlueprintCallable)
 	void GoToMainMenuFromPause();
+	UFUNCTION(BlueprintCallable)
+	void ShowNameEntryMenu();
+	UFUNCTION(BlueprintCallable)
+	void HideNameEntryMenu();
 
 
 	

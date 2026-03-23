@@ -31,11 +31,11 @@ protected:
 	// int32 MapHeight = 40;
 
 	//Number of random walk steps to take
-    UPROPERTY(EditAnywhere, Category = "Walker")
+    UPROPERTY(EditAnywhere, Category = Walker)
 	int32 NumSteps = 1000;
 
 	//Bool to start in center or random start
-    UPROPERTY(EditAnywhere, Category = "Walker")
+    UPROPERTY(EditAnywhere, Category = Walker)
 	bool bStartInCenter = true;
 
 	// //Size of a tile in world units
@@ -43,10 +43,10 @@ protected:
 	// float TileSize = 100.f;
 
 	//Mesh to use for floor cells
-    UPROPERTY(EditAnywhere, Category = "Walker")
+    UPROPERTY(EditAnywhere, Category = Walker)
 	UStaticMesh* FloorMesh;
 
-    UPROPERTY(EditAnywhere, Category = "Walker")
+    UPROPERTY(EditAnywhere, Category = Walker)
 	float FloorZ = 0.f;
 
 	//All spawned Wall segments
@@ -60,22 +60,22 @@ protected:
 	// -- Walls --
 
 	//Wall mesh
-    UPROPERTY(EditAnywhere, Category = "Walker")
+    UPROPERTY(EditAnywhere, Category = Walker)
 	UStaticMesh* WallMesh;
 
 	//Height offsets
 
-    UPROPERTY(EditAnywhere, Category = "Walker")
+    UPROPERTY(EditAnywhere, Category = Walker)
 	float WallHeight = 200.f;
 
 	// -- Doors --
 	
 	//How many doors to carve out
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	int32 DefaultDoorCount = 3;
 
 	//Mesh for the Doors
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	UStaticMesh* DoorMesh = nullptr;
 
 private:

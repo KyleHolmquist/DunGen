@@ -33,41 +33,41 @@ protected:
 	virtual void BeginPlay() override;
 
 	//Which moduule types to spawn for test
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	TSubclassOf<AFloorGeneratorBase> FirstModuleClass;
 	
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	TSubclassOf<AFloorGeneratorBase> SecondModuleClass;
 
 	//Floor Size
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	int32 MapWidth = 30; 
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	int32 MapHeight = 30;
 
 	//Holmquist Size
-	UPROPERTY(EditAnywhere, Category = "Dungeon")
+	UPROPERTY(EditAnywhere, Category = Dungeon)
 	int32 HolmquistTiles = 80;
 
 	//Desired doors
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	int32 FirstModuleDoors = 2;
 	
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	int32 SecondModuleDoors = 2;
 
 	//How far to separate modules so they don't overlap
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	float ModuleSeparation = 400.f;
 
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	float MinGapBetweenModules = 400.f;
 
 	//Corridor meshes
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	UStaticMesh* CorridorFloorMesh;
 	
-	UPROPERTY(EditAnywhere, Category="Dungeon")
+	UPROPERTY(EditAnywhere, Category=Dungeon)
 	UStaticMesh* CorridorWallMesh;
 
 	// -- Corridors --
@@ -168,8 +168,8 @@ protected:
 
 	// ---- Dungeon Spawning ----
 
-	int32 AccruedWisdom;
-	int32 BankedWisdom;
+	int32 AccruedWisdom = 0;
+	int32 BankedWisdom = 0;
 	int32 DungeonSize;
 	int32 BreakableQuantityInLevel;
 	int32 PropQuantityInLevel;
@@ -236,7 +236,7 @@ private:
 	AFloorGeneratorBase* SpawnModule(TSubclassOf<AFloorGeneratorBase> ModuleClass, const FVector& Location, int32 DesiredDoors);
 	
 
-    UFUNCTION(BlueprintCallable, Category="Dungeon")
+    UFUNCTION(BlueprintCallable, Category=Dungeon)
     AFloorGeneratorBase* SpawnConfiguredModule(
         TSubclassOf<AFloorGeneratorBase> ModuleClass,
         const FTransform& SpawnTransform,
@@ -270,10 +270,37 @@ public:
 	bool HasPlayerEnteredPortal() const { return bPlayerEnteredPortal; }
 	void SetPlayerEnteredPortal(bool bEntered) { bPlayerEnteredPortal = bEntered; }
 
+	UFUNCTION(BlueprintCallable, Category = Wisdom)
 	int32 GetBankedWisdom() { return BankedWisdom; }
+
+	UFUNCTION(BlueprintCallable, Category = Wisdom)
 	int32 GetAccruedWisdom() { return AccruedWisdom; }
 
+	UFUNCTION(BlueprintCallable, Category = "Wisdom")
+	void SetBankedWisdom(int32 Amount);
+
+	UFUNCTION(BlueprintCallable, Category = Wisdom)
+	void AddToBankedWisdom(int32 Amount);
+
+	UFUNCTION(BlueprintCallable, Category = Wisdom)
+	void AddToAccruedWisdom(int32 Amount);
+
+	UFUNCTION(BlueprintCallable, Category = Wisdom)
+	bool TrySpendBankedWisdom(int32 Amount);
+
+	UFUNCTION(BlueprintCallable, Category = Wisdom)
+	void SetAccruedWisdom(int32 Amount);
+
 	void SpawnNewDungeon();
+
+    UFUNCTION(BlueprintCallable, Category = Player)
+    void ResetNPCFirstMeetings();
+
+    UFUNCTION(BlueprintCallable, Category = Player)
+    void BeginNameEntryFlow();
+
+    UFUNCTION(BlueprintCallable, Category = Player)
+    void SubmitPlayerName(const FString& EnteredName);
 
 
 };

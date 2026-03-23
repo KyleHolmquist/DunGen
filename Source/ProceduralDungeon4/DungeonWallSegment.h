@@ -11,6 +11,14 @@ struct PROCEDURALDUNGEON4_API FDungeonWallSegment
 {
     GENERATED_BODY()
 
+    FDungeonWallSegment()
+        : Cell(FIntPoint::ZeroValue)
+        , Direction(0)
+        , WallActor(nullptr)
+        , WallCell(FIntPoint(-1, -1))
+    {
+    }
+
     // Grid cell that owns this wall (the floor cell)
     UPROPERTY()
     FIntPoint Cell;

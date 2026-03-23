@@ -20,6 +20,7 @@ class UDunGenOverlay;
 class UDunGenDialogueOverlay;
 class UAttributeComponent;
 struct FDialogueOption;
+class ADungeonManager;
 
 UCLASS()
 class PROCEDURALDUNGEON4_API AAirsto : public ABaseCharacter, public IPickupInterface
@@ -130,10 +131,10 @@ protected:
 	bool IsUnoccupied();
 
 	//Dodge Movement
-	UPROPERTY(EditAnywhere, Category="Stats")
+	UPROPERTY(EditAnywhere, Category=Stats)
 	float BaseDodgeSpeed = 900.f;
 
-	UPROPERTY(EditAnywhere, Category="Stats")
+	UPROPERTY(EditAnywhere, Category=Stats)
 	float CurrentDodgeSpeed;
 
 	FVector DodgeDirection = FVector::ZeroVector;
@@ -179,6 +180,11 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category = UI)
     bool bInteractPromptVisible = false;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Player)
+    FString PlayerName = TEXT("");
+
+	ADungeonManager* DungeonManager;
+
 private:
 
     void InitializeEnhancedInput();
@@ -201,10 +207,10 @@ private:
 	UPROPERTY(VisibleInstanceOnly)
 	AItem* OverlappingItem;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Montages");
+	UPROPERTY(EditDefaultsOnly, Category = Montages);
 	UAnimMontage* EquipMontage;
 
-	UPROPERTY(VisibleAnywhere, Category="HUD")
+	UPROPERTY(VisibleAnywhere, Category=HUD)
 	UDunGenOverlay* DunGenOverlay;
 
 	UPROPERTY(VisibleAnywhere, Category=HUD)
@@ -307,5 +313,20 @@ public:
 
 	void ShowInteractPrompt(const FText& PromptText);
 	void HideInteractPrompt();
+
+    UFUNCTION(BlueprintCallable, Category = Player)
+    void SetPlayerName(const FString& NewName);
+
+    UFUNCTION(BlueprintCallable, Category = Player)
+    FString GetPlayerName() const;
+
+    UFUNCTION(BlueprintCallable, Category = Player)
+    bool HasValidPlayerName() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetTreasureAmount(int32 Amount);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveTreasure(int32 Amount);
 
 };

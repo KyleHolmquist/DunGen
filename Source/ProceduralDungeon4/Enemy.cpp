@@ -163,6 +163,13 @@ void AEnemy::SpawnReward()
     {
         SpawnedReward->SetOwner(this);
     }
+
+    AWisdom* SpawnedWisdom = World->SpawnActor<AWisdom>(WisdomClass, SpawnLocation + FVector(5.f, 5.f, 0.f), SpawnRotation);
+    if (SpawnedWisdom)
+    {
+        SpawnedWisdom->SetOwner(this);
+    }
+
 }
 
 void AEnemy::SpawnTreasure()
@@ -518,11 +525,6 @@ void AEnemy::SetMaxHealth(int SelectedMaxHealth)
 {
     if (!Attributes) return;
     Attributes->InitHealth(SelectedMaxHealth);
-}
-void AEnemy::SetWisdomAmount(int SelectedWisdomAmount)
-{
-    if (!Attributes) return;
-    Attributes->InitWisdom(SelectedWisdomAmount);
 }
 void AEnemy::SetHealthPickupAmount(int SelectedHealthPickupAmount)
 {

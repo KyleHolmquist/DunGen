@@ -387,7 +387,7 @@ bool AWalk_FloorGenerator::IsValidPortalCandidate(int32 WallX, int32 WallY) cons
 			continue;
 		}
 
-		// false = floor
+		//false = floor
 		if (!Map[Index(NX, NY)])
 		{
 			++FloorNeighbors;

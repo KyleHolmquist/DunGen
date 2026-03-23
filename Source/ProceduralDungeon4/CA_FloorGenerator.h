@@ -17,15 +17,15 @@ public:
 	ACA_FloorGenerator();
 
 	//How many simulation steps to run
-	UPROPERTY(EditAnywhere, Category = "CA")
+	UPROPERTY(EditAnywhere, Category = CA)
 	int32 SimulationSteps = 5;
 	
 	//If a cell is wall and has < DeathLimit neighbors => becomes floor
 	//if a cell is floor and has > BirthLimit neighbors => becomes wall
-	UPROPERTY(EditAnywhere, Category = "CA")
+	UPROPERTY(EditAnywhere, Category = CA)
 	int32 BirthLimit = 4;
 	
-	UPROPERTY(EditAnywhere, Category = "CA")
+	UPROPERTY(EditAnywhere, Category = CA)
 	int32 DeathLimit = 3;
 
 	virtual bool IsEmpty(int32 X, int32 Y) const override;
@@ -39,14 +39,14 @@ protected:
 	// ---- Grid / CA Settings ----
 
 	// //Grid size in cells
-	// UPROPERTY(EditAnywhere, Category = "CA")
+	// UPROPERTY(EditAnywhere, Category = CA)
 	// int32 MapWidth = 60;
 	
-	// UPROPERTY(EditAnywhere, Category = "CA")
+	// UPROPERTY(EditAnywhere, Category = CA)
 	// int32 MapHeight = 40;
 	
-	//% chance for a cell to start as a wall (0-100)
-	UPROPERTY(EditAnywhere, Category = "CA")
+	//% chance for a cell to start as a wall
+	UPROPERTY(EditAnywhere, Category = CA)
 	int32 InitWallChance = 45;
 
 	//Classic cave rules:
@@ -56,10 +56,10 @@ protected:
 	// float TileSize = 100.f;
 	
 	//Height of floor and walls
-	UPROPERTY(EditAnywhere, Category = "CA")
+	UPROPERTY(EditAnywhere, Category = CA)
 	float FloorZ = 0.f;
 	
-	UPROPERTY(EditAnywhere, Category = "CA")
+	UPROPERTY(EditAnywhere, Category = CA)
 	float WallHeight = 200.f;
 
 	//All spawned Wall segments
@@ -73,15 +73,15 @@ protected:
 	// -- Doors --
 	
 	//How many doors to carve out
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	int32 DefaultDoorCount = 3;
 
 	//Mesh for the Doors
-	UPROPERTY(EditAnywhere, Category = "Doors")
+	UPROPERTY(EditAnywhere, Category = Doors)
 	UStaticMesh* DoorMesh = nullptr;
 
 	//Random seed for reproducibility
-	UPROPERTY(EditAnywhere, Category = "Door")
+	UPROPERTY(EditAnywhere, Category = Door)
 	int32 Seed = 12345;
 	
 private:
